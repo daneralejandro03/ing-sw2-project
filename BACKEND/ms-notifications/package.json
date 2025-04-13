@@ -1,0 +1,22 @@
+{
+  "name": "ms-notifications",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./src/index.js",
+    "dev": "nodemon ./src/index.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watchAll"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@azure/communication-email": "^1.0.0",
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9"
+  }
+}
