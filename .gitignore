@@ -41,6 +41,8 @@ lerna-debug.log*
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Cualquier .env en cualquier carpeta
+.env
+.env.*
 **/.env
 **/.env.*
 
