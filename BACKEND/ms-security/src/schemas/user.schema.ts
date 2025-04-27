@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
+
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -56,6 +58,13 @@ export class User {
 
     @Prop()
     twoFactorCodeExpires: Date;
+
+    @Prop({ default: false },)
+    requiresTwoFactor: boolean;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Role', required: true })
+    role: Types.ObjectId;
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

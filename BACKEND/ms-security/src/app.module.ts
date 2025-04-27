@@ -6,6 +6,10 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
+import { RoleModule } from './role/role.module';
+import { PermissionModule } from './permission/permission.module';
+import { AccessModule } from './access/access.module';
+
 
 @Module({
   imports: [
@@ -25,6 +29,9 @@ import { AuthModule } from './auth/auth.module';
     }),
     EmailModule,
     AuthModule,
+    RoleModule,
+    PermissionModule,
+    AccessModule,
   ],
   controllers: [AppController],
   providers: [AppService],

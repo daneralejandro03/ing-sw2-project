@@ -11,7 +11,7 @@ import { EmailService } from './email.service';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         baseURL: config.get<string>('EMAIL_API_URL'),
-        timeout: 5000,
+        timeout: 10000,
         headers: { 'Content-Type': 'application/json' },
       }),
       inject: [ConfigService],

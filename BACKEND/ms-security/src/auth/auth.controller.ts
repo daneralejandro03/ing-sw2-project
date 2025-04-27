@@ -1,34 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+//import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import { LoginDto } from './dto/login.dto';
+import { VerifyCodeDto } from './dto/verify-code.dto';
+import { ResendCodeDto } from './dto/resend-code.dto';
+import { TwoFactorDto } from './dto/two-factor.dto';
+import { ToggleTwoFactorDto } from './dto/toggle-two-factor.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @Post('register')
+  register(@Body() dto: CreateUserDto) {
+    return this.authService.register(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @Post('verify')
+  verify(@Body() dto: VerifyCodeDto) {
+    return this.authService.verify(dto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+  @Post('resend')
+  resend(@Body() dto: ResendCodeDto) {
+    return this.authService.resend(dto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
+  @UseGuards(AuthGuard('local'))
+  @Post('login')
+  login(@Request() req, @Body() dto: LoginDto) {
+    return this.authService.login(dto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @Post('2fa')
+  twoFactor(@Body() dto: TwoFactorDto) {
+    return this.authService.twoFactor(dto);
+  }
+
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('2fa/toggle')
+  toggleTwoFactor(@Body() dto: ToggleTwoFactorDto) {
+    return this.authService.toggleTwoFactor(dto);
   }
 }

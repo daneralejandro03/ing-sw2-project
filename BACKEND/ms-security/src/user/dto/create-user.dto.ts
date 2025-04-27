@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, IsBoolean, IsNumber, IsOptional, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsBoolean, IsNumber, IsOptional, IsDate, MinLength } from 'class-validator';
 
 export class CreateUserDto {
 
@@ -28,11 +28,12 @@ export class CreateUserDto {
 
     @IsString()
     @IsNotEmpty()
+    @MinLength(6)
     password: string;
 
     @IsBoolean()
-    @IsNotEmpty()
-    estado: boolean;
+    @IsOptional()
+    estado?: boolean;
 
     @IsNumber()
     @IsNotEmpty()
@@ -66,4 +67,12 @@ export class CreateUserDto {
     @IsDate()
     @IsOptional()
     twoFactorCodeExpires?: Date;
+
+    @IsBoolean()
+    @IsOptional()
+    requiresTwoFactor?: boolean;
+
+    @IsString()
+    @IsNotEmpty()
+    readonly roleId: string;
 }
