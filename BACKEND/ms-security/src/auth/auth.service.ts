@@ -31,7 +31,7 @@ export class AuthService {
     const exists = await this.userModel.findOne({ email: dto.email });
     if (exists) throw new BadRequestException('Email ya registrado');
 
-    const role = await this.roleModel.findById(dto.roleId).exec();
+    const role = await this.roleModel.findById(dto.role).exec();
     if (!role) throw new NotFoundException('Rol no encontrado');
 
     const hash = await bcrypt.hash(dto.password, 10);

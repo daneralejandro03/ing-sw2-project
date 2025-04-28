@@ -14,5 +14,6 @@ import { Access, AccessSchema } from '../schemas/access.schema';
   ],
   controllers: [PermissionController],
   providers: [PermissionService],
+  exports: [MongooseModule],
 })
 export class PermissionModule { }

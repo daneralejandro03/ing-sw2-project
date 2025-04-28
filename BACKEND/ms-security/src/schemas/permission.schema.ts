@@ -10,7 +10,10 @@ export type PermissionDocument = HydratedDocument<Permission>;
 })
 export class Permission {
     @Prop({ required: true })
-    name: string;
+    url: string;
+
+    @Prop({ required: true })
+    method: string;
 
     @Prop({ required: true })
     module: string;

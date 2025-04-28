@@ -17,17 +17,17 @@ export class UserService {
     return this.userModel.find();
   }
 
-  async findOne(id: number) {
-    return this.userModel.findById(id);
+  async findOne(id: string) {
+    return this.userModel.findById(id).populate('role');
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     return this.userModel.findByIdAndUpdate(id, updateUserDto, {
       new: true,
     })
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     return this.userModel.findByIdAndDelete(id);
   }
 }

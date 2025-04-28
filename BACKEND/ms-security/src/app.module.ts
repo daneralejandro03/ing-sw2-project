@@ -10,7 +10,6 @@ import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
 import { AccessModule } from './access/access.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({

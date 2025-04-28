@@ -74,5 +74,5 @@ export class CreateUserDto {
 
     @IsString()
     @IsNotEmpty()
-    readonly roleId: string;
+    readonly role: string;
 }

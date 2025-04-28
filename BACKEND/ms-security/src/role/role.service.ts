@@ -10,25 +10,24 @@ export class RoleService {
   constructor(@InjectModel(Role.name) private readonly roleModel: Model<Role>) { }
 
   create(createRoleDto: CreateRoleDto) {
-    const role = new this.roleModel(createRoleDto);
-    return role.save();
+    return this.roleModel.create(createRoleDto);
   }
 
   findAll() {
     return this.roleModel.find();
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.roleModel.findById(id);
   }
 
-  update(id: number, updateRoleDto: UpdateRoleDto) {
+  update(id: string, updateRoleDto: UpdateRoleDto) {
     return this.roleModel.findByIdAndUpdate(id, updateRoleDto, {
       new: true,
     });
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return this.roleModel.findByIdAndDelete(id);
   }
 }

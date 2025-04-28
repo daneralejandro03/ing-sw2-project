@@ -5,7 +5,7 @@ import { UpdatePermissionDto } from './dto/update-permission.dto';
 
 @Controller('permission')
 export class PermissionController {
-  constructor(private readonly permissionService: PermissionService) {}
+  constructor(private readonly permissionService: PermissionService) { }
 
   @Post()
   create(@Body() createPermissionDto: CreatePermissionDto) {
@@ -19,16 +19,16 @@ export class PermissionController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.permissionService.findOne(+id);
+    return this.permissionService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePermissionDto: UpdatePermissionDto) {
-    return this.permissionService.update(+id, updatePermissionDto);
+    return this.permissionService.update(id, updatePermissionDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.permissionService.remove(+id);
+    return this.permissionService.remove(id);
   }
 }

@@ -5,16 +5,18 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../schemas/user.schema';
 import { EmailModule } from 'src/email/email.module';
 import { Role, RoleSchema } from 'src/schemas/role.schema';
+import { AccessGuard } from '../guards/access.guard';
+import { PermissionModule } from 'src/permission/permission.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
-    ]), EmailModule
+    ]), EmailModule, PermissionModule,
   ],
 
   controllers: [UserController],
-  providers: [UserService,],
+  providers: [UserService, AccessGuard],
 })
 export class UserModule { }
