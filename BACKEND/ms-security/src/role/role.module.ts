@@ -5,6 +5,9 @@ import { RoleController } from './role.controller';
 import { Role, RoleSchema } from 'src/schemas/role.schema';
 import { User, UserSchema } from 'src/schemas/user.schema';
 import { Access, AccessSchema } from 'src/schemas/access.schema';
+import { AccessGuard } from '../guards/access.guard';
+import { PermissionModule } from '../permission/permission.module';
+
 
 @Module({
   imports: [
@@ -13,8 +16,9 @@ import { Access, AccessSchema } from 'src/schemas/access.schema';
       { name: User.name, schema: UserSchema },
       { name: Access.name, schema: AccessSchema },
     ]),
+    PermissionModule,
   ],
   controllers: [RoleController],
-  providers: [RoleService],
+  providers: [RoleService, AccessGuard],
 })
 export class RoleModule { }

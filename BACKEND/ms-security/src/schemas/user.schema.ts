@@ -62,6 +62,14 @@ export class User {
     @Prop({ default: false },)
     requiresTwoFactor: boolean;
 
+    /** Token para restablecer contraseña */
+    @Prop({ type: String, default: null })
+    resetPasswordToken: string | null;
+
+    /** Expiración del token de reseteo */
+    @Prop({ type: Date, default: null })
+    resetPasswordExpires: Date | null;
+
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Role', required: true })
     role: Types.ObjectId;
 

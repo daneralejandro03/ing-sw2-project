@@ -1,18 +1,18 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Model, Connection } from 'mongoose';
 import { InjectConnection } from '@nestjs/mongoose';
-
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from '../email/email.service';
-//import { RegisterDto } from './dto/register.dto';
+import { SmsService } from 'src/sms/sms.service';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { ToggleTwoFactorDto } from './dto/toggle-two-factor.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { ResendCodeDto } from './dto/resend-code.dto';
 import { TwoFactorDto } from './dto/two-factor.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from 'src/schemas/user.schema';
 import { Role } from 'src/schemas/role.schema';
 
@@ -25,6 +25,7 @@ export class AuthService {
 
     private jwtService: JwtService,
     private emailService: EmailService,
+    private smsService: SmsService,
   ) { }
 
   async register(dto: CreateUserDto) {
@@ -75,6 +76,7 @@ export class AuthService {
     return { message: 'Usuario registrado, revisa tu email' };
   }
 
+
   async verify({ email, code }: VerifyCodeDto) {
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Usuario no existe');
@@ -89,6 +91,7 @@ export class AuthService {
     const token = this.jwtService.sign({ id: user._id });
     return { message: 'Cuenta verificada', token };
   }
+
 
   async resend({ email }: ResendCodeDto) {
     const user = await this.userModel.findOne({ email });
@@ -106,6 +109,7 @@ export class AuthService {
     return { message: 'Código reenviado' };
   }
 
+
   async toggleTwoFactor(dto: ToggleTwoFactorDto) {
     const user = await this.userModel.findOne({ email: dto.email });
     if (!user) throw new NotFoundException('Usuario no existe');
@@ -116,34 +120,55 @@ export class AuthService {
     return { message: `2FA ${dto.enable ? 'habilitado' : 'deshabilitado'} correctamente` };
   }
 
-  async login({ email, password }: LoginDto) {
+  async login(dto: LoginDto) {
+    const { email, password, twoFactorMethod = 'email' } = dto;
     const user = await this.userModel.findOne({ email });
 
+    // 1) Validar credenciales
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new BadRequestException('Credenciales inválidas');
     }
 
+    // 2) Si no requiere 2FA, devolvemos el JWT directamente
     if (!user.requiresTwoFactor) {
       const payload = { id: user._id, email: user.email };
       return { access_token: this.jwtService.sign(payload) };
     }
 
-    // Generar código 2FA si aún no existe o está expirado
+    // 3) Generar y guardar código 2FA
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
-
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
     user.twoFactorCode = code;
     user.twoFactorCodeExpires = expires;
     await user.save();
 
-    await this.emailService.sendMail({
-      address: email,
-      subject: 'Código 2FA',
-      plainText: `Tu código 2FA es: ${code}. Expira en 10 minutos.`,
-    });
+    // 4) Enviar el código por email o SMS
+    const text = `Tu código 2FA es: ${code}. Expira en 10 minutos.`;
 
-    return { message: 'Código 2FA enviado, revisa tu correo' };
+    if (twoFactorMethod === 'sms') {
+      if (!user.cellPhone) {
+        throw new BadRequestException('No hay número de celular registrado');
+      }
+
+      const cellPhone = `+${user.cellPhone.toString()}`;
+
+      await this.smsService.sendSms({ to: cellPhone, body: text });
+    } else {
+      await this.emailService.sendMail({
+        address: email,
+        subject: 'Código 2FA',
+        plainText: text,
+      });
+    }
+
+    // 5) Informar al cliente que revise su canal elegido
+    return {
+      message: 'Código 2FA enviado',
+      method: twoFactorMethod,
+      expiresAt: expires.toISOString(),
+    };
   }
+
 
   async twoFactor({ email, code }: TwoFactorDto) {
     const user = await this.userModel.findOne({ email });
@@ -157,6 +182,7 @@ export class AuthService {
     const token = this.jwtService.sign({ id: user._id, email });
     return { access_token: token };
   }
+
 
   async validateUser(email: string, password: string): Promise<User | null> {
 
@@ -179,7 +205,60 @@ export class AuthService {
     if (user && user.requiresTwoFactor) {
       return { ...userWithPassword.toObject(), requiresTwoFactor: true };
     }
-
     return user;
+  }
+
+  async changePassword(dto: ChangePasswordDto) {
+
+    const user = await this.userModel.findOne({ email: dto.email });
+    console.log(user);
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const match = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!match) throw new BadRequestException('Contraseña anterior incorrecta');
+
+    user.password = await bcrypt.hash(dto.newPassword, 10);
+    await user.save();
+
+    return { message: 'Contraseña actualizada correctamente' };
+  }
+
+
+  async forgotPassword(email: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) throw new NotFoundException('Email no registrado');
+
+    const token = this.jwtService.sign(
+      { id: user._id },
+      { expiresIn: '1h' },
+    );
+
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    await user.save();
+
+    const resetUrl = `https://tu-frontend.com/reset-password?token=${token}`;
+    await this.emailService.sendMail({
+      address: email,
+      subject: 'Restablecer contraseña',
+      plainText: `Para recuperar tu contraseña haz clic aquí: ${resetUrl}`,
+    });
+
+    return { message: 'Correo de recuperación enviado' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.userModel.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+    if (!user) throw new BadRequestException('Token inválido o expirado');
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    return { message: 'Contraseña restablecida correctamente' };
   }
 }

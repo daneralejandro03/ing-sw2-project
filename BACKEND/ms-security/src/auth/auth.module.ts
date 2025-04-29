@@ -8,6 +8,7 @@ import { User, UserSchema } from '../schemas/user.schema';
 import { Role, RoleSchema } from '../schemas/role.schema';
 import { PassportModule } from '@nestjs/passport';
 import { EmailModule } from '../email/email.module';
+import { SmsModule } from 'src/sms/sms.module';
 import { LocalStrategy } from './local/local.strategy';
 import { JwtAuthStrategy } from './local/jwt.strategy';
 
@@ -24,7 +25,7 @@ import { JwtAuthStrategy } from './local/jwt.strategy';
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }, { name: Role.name, schema: RoleSchema }]),
-    EmailModule,
+    EmailModule, SmsModule
   ],
   providers: [AuthService, LocalStrategy, JwtAuthStrategy],
   controllers: [AuthController],

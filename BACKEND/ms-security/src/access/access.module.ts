@@ -5,6 +5,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Permission, PermissionSchema } from '../schemas/permission.schema';
 import { Role, RoleSchema } from '../schemas/role.schema';
 import { Access, AccessSchema } from '../schemas/access.schema';
+import { PermissionModule } from '../permission/permission.module';
+import { AccessGuard } from '../guards/access.guard';
 
 
 @Module({
@@ -15,8 +17,9 @@ import { Access, AccessSchema } from '../schemas/access.schema';
       { name: Role.name, schema: RoleSchema },
 
     ]),
+    PermissionModule,
   ],
   controllers: [AccessController],
-  providers: [AccessService],
+  providers: [AccessService, AccessGuard],
 })
 export class AccessModule { }

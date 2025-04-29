@@ -1,6 +1,16 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 
 export class LoginDto {
-    @IsEmail() email: string;
-    @IsString() password: string;
+
+    @IsEmail()
+    @IsNotEmpty()
+    email: string;
+
+    @IsString()
+    @IsNotEmpty()
+    password: string;
+
+    @IsOptional()
+    @IsIn(['email', 'sms'])
+    twoFactorMethod?: 'email' | 'sms';
 }
