@@ -15,7 +15,6 @@ function createHtmlTemplate(subject, plainText) {
     .replace("{{plainText}}", plainText);
 }
 
-// Función mara mandar correo electronico, se consume con el servicio de Azure de comunications
 async function sendEmail(address, subject, plainText) {
   const html = createHtmlTemplate(subject, plainText);
   const emailMessage = {

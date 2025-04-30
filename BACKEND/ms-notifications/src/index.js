@@ -10,15 +10,13 @@ const path = require("path");
 const app = express();
 app.use(bodyParser.json());
 
-// puerto por defecto si no está en .env
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
-// definición OpenAPI
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
     title: "Servicio de Comunicación SMS y Email",
-    version: "1.0.0",
+    version: "1.0",
     description:
       "API para enviar SMS con Twilio y correos con Azure Communication Services",
   },
@@ -27,13 +25,12 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: [path.join(__dirname, "index.js")], // solo index.js
+  apis: [path.join(__dirname, "index.js")],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
 console.log("Endpoints detectados:", Object.keys(swaggerSpec.paths));
 
-// montamos Swagger UI
 app.use(
   "/api-docs",
   swaggerUi.serve,
