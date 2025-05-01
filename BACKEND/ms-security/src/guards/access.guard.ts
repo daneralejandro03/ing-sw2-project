@@ -47,16 +47,29 @@ export class AccessGuard implements CanActivate {
             ? parts[parts.indexOf('api') + 2]
             : parts[0];
 
+        console.log('Metodo:', method);
+
         const permission = await this.permModel
             .findOne({ url: normalizedPath, method, module })
             .exec();
+
+        console.log('Permiso:', permission);
+
         if (!permission) throw new ForbiddenException('Permiso no encontrado');
 
-        const hasAccess = await this.accessModel
-            .findOne({ role: user.role, permission: permission._id })
-            .exec();
-        if (!hasAccess) throw new ForbiddenException('Acceso denegado');
+        console.log('Usuario:', user);
+        console.log('Rol del usuario:', user.role);
+        console.log('permiso:', permission._id);
+        console.log('Método:', method);
+        {
+            const hasAccess = await this.accessModel
+                .findOne({ role: user.role, permission: permission._id })
+                .exec();
+            console.log('Acceso:', hasAccess);
+            console.log('Acceso Permiso:', hasAccess?.permission, 'Acceso Rol:', hasAccess?.role);
+            if (!hasAccess) throw new ForbiddenException('Acceso denegado');
 
-        return true;
+            return true;
+        }
     }
 }

@@ -25,9 +25,9 @@ import { JwtAuthStrategy } from './local/jwt.strategy';
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }, { name: Role.name, schema: RoleSchema }]),
-    EmailModule, SmsModule
+    EmailModule, SmsModule,
   ],
   providers: [AuthService, LocalStrategy, JwtAuthStrategy],
-  controllers: [AuthController],
+  controllers: [AuthController]
 })
 export class AuthModule { }

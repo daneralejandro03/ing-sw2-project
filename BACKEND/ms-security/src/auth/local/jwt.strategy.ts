@@ -1,12 +1,13 @@
-
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { Strategy as JwtStrategy, ExtractJwt, StrategyOptions } from 'passport-jwt';
 
+// Amplía el payload para incluir el rol
 interface JwtPayload {
     id: string;
     email: string;
+    role: string;
 }
 
 @Injectable()
@@ -27,7 +28,12 @@ export class JwtAuthStrategy extends PassportStrategy(JwtStrategy) {
         super(options);
     }
 
-    validate(payload: JwtPayload): Promise<{ userId: string; email: string }> {
-        return Promise.resolve({ userId: payload.id, email: payload.email });
+    // Ahora validate devuelve también el role sin nuevas consultas a BD
+    validate(payload: JwtPayload): Promise<{ userId: string; email: string; role: string }> {
+        return Promise.resolve({
+            userId: payload.id,
+            email: payload.email,
+            role: payload.role,
+        });
     }
 }

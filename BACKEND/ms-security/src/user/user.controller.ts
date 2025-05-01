@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Req
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { EmailService } from 'src/email/email.service';
@@ -14,6 +15,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AccessGuard } from '../guards/access.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { User } from '../schemas/user.schema';
+
 import {
   ApiTags,
   ApiOperation,
@@ -23,8 +26,12 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 
-@ApiTags('User')           // Agrupa estos endpoints bajo “users”
-@ApiBearerAuth()            // Muestra el botón Authorize para JWT
+interface AuthenticatedRequest extends Request {
+  user: User;
+}
+
+@ApiTags('User')
+@ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 @Controller('user')
 export class UserController {
@@ -38,8 +45,13 @@ export class UserController {
   @ApiBody({ type: CreateUserDto, description: 'Datos para nuevo usuario' })
   @ApiResponse({ status: 201, description: 'Usuario creado correctamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos o usuario ya existe.' })
-  async create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const currentUser = req.user;
+    console.log('Usuario actual:', currentUser);
+    return this.userService.create(createUserDto, currentUser);
   }
 
   @Get()
@@ -47,6 +59,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Listado de usuarios retornado.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async findAll() {
+    console.log('Obteniendo todos los usuarios');
     return this.userService.findAll();
   }
 

@@ -3,4 +3,6 @@ export enum Role {
     Manager = 'Manager',
     Dispatcher = 'Dispatcher',
     DeliveryDriver = 'DeliveryDriver',
+    Guest = 'Guest'
+
 }

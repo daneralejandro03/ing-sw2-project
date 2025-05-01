@@ -6,7 +6,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from '../email/email.service';
 import { SmsService } from 'src/sms/sms.service';
-import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { ToggleTwoFactorDto } from './dto/toggle-two-factor.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
@@ -15,6 +14,7 @@ import { TwoFactorDto } from './dto/two-factor.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from 'src/schemas/user.schema';
 import { Role } from 'src/schemas/role.schema';
+import { RegisterUserDto } from './dto/register-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -28,12 +28,13 @@ export class AuthService {
     private smsService: SmsService,
   ) { }
 
-  async register(dto: CreateUserDto) {
+  async register(dto: RegisterUserDto) {
+
     const exists = await this.userModel.findOne({ email: dto.email });
     if (exists) throw new BadRequestException('Email ya registrado');
 
-    const role = await this.roleModel.findById(dto.role).exec();
-    if (!role) throw new NotFoundException('Rol no encontrado');
+    const guestRole = await this.roleModel.findOne({ name: 'Guest' }).exec();
+    if (!guestRole) throw new NotFoundException('Rol Guest no encontrado');
 
     const hash = await bcrypt.hash(dto.password, 10);
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -42,10 +43,11 @@ export class AuthService {
     const session = await this.connection.startSession();
     session.startTransaction();
     try {
+
       const [createdUser] = await this.userModel.create([{
         ...dto,
         password: hash,
-        role: role._id,
+        role: guestRole._id,
         estado: false,
         verificationCode: code,
         verificationCodeExpires: expires,
@@ -53,20 +55,21 @@ export class AuthService {
       }], { session });
 
       await this.roleModel.updateOne(
-        { _id: role._id },
+        { _id: guestRole._id },
         { $push: { users: createdUser._id } },
         { session }
       ).exec();
 
       await session.commitTransaction();
     } catch (err) {
-      console.error('Error al registrar usuario:', err);
       await session.abortTransaction();
+      console.error('Error al registrar usuario:', err);
       throw new BadRequestException('Error al registrar usuario');
     } finally {
       session.endSession();
     }
 
+    // 5) Envío código de verificación por email
     await this.emailService.sendMail({
       address: dto.email,
       subject: 'Código de verificación',
@@ -88,7 +91,11 @@ export class AuthService {
     user.verificationCode = "";
     user.verificationCodeExpires = new Date(0);
     await user.save();
-    const token = this.jwtService.sign({ id: user._id });
+    const token = this.jwtService.sign({
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role.toString(),
+    });;
     return { message: 'Cuenta verificada', token };
   }
 
@@ -131,7 +138,11 @@ export class AuthService {
 
     // 2) Si no requiere 2FA, devolvemos el JWT directamente
     if (!user.requiresTwoFactor) {
-      const payload = { id: user._id, email: user.email };
+      const payload = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role.toString(),
+      };
       return { access_token: this.jwtService.sign(payload) };
     }
 
@@ -179,7 +190,11 @@ export class AuthService {
     user.twoFactorCode = "";
     user.twoFactorCodeExpires = new Date(0);
     await user.save();
-    const token = this.jwtService.sign({ id: user._id, email });
+    const token = this.jwtService.sign({
+      id: user._id.toString(),
+      email,
+      role: user.role.toString(),
+    });
     return { access_token: token };
   }
 
