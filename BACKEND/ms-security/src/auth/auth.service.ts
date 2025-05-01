@@ -131,12 +131,17 @@ export class AuthService {
     const { email, password, twoFactorMethod = 'email' } = dto;
     const user = await this.userModel.findOne({ email });
 
-    // 1) Validar credenciales
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      throw new BadRequestException('Credenciales inválidas');
+    }
+    if (!user.estado) {
+      throw new BadRequestException('Cuenta no verificada');
+    }
+    if (!(await bcrypt.compare(password, user.password))) {
       throw new BadRequestException('Credenciales inválidas');
     }
 
-    // 2) Si no requiere 2FA, devolvemos el JWT directamente
+
     if (!user.requiresTwoFactor) {
       const payload = {
         id: user._id.toString(),
@@ -146,14 +151,12 @@ export class AuthService {
       return { access_token: this.jwtService.sign(payload) };
     }
 
-    // 3) Generar y guardar código 2FA
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     user.twoFactorCode = code;
     user.twoFactorCodeExpires = expires;
     await user.save();
 
-    // 4) Enviar el código por email o SMS
     const text = `Tu código 2FA es: ${code}. Expira en 10 minutos.`;
 
     if (twoFactorMethod === 'sms') {
@@ -172,7 +175,6 @@ export class AuthService {
       });
     }
 
-    // 5) Informar al cliente que revise su canal elegido
     return {
       message: 'Código 2FA enviado',
       method: twoFactorMethod,
@@ -209,6 +211,10 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, userWithPassword.password);
 
     if (!isPasswordValid) {
+      return null;
+    }
+
+    if (!userWithPassword.estado) {
       return null;
     }
 
