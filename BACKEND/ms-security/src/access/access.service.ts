@@ -49,21 +49,106 @@ export class AccessService {
 
 
   findAll() {
-    return this.accessModel.find();
+    return this.accessModel.find().populate('role').populate('permission');
   }
 
   findOne(id: string) {
     return this.accessModel.findById(id).populate('role').populate('permission');
   }
 
-  update(id: string, updateAccessDto: UpdateAccessDto) {
-    return this.accessModel.findByIdAndUpdate(id, updateAccessDto, {
-      new: true,
-    })
+  async update(id: string, dto: UpdateAccessDto): Promise<Access> {
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const oldAccess = await this.accessModel.findById(id, {}, { session });
+      if (!oldAccess) {
+        throw new NotFoundException(`Access ${id} no encontrado`);
+      }
+
+      const updated = await this.accessModel.findByIdAndUpdate(id, dto, {
+        new: true,
+        session,
+      });
+
+      if (!updated) {
+        throw new NotFoundException(`Access ${id} not found after update`);
+      }
+
+      if (dto.role && !oldAccess.role.equals(dto.role)) {
+        await Promise.all([
+          this.roleModel.updateOne(
+            { _id: oldAccess.role },
+            { $pull: { access: id } },
+            { session },
+          ),
+          this.roleModel.updateOne(
+            { _id: dto.role },
+            { $addToSet: { access: id } },
+            { session },
+          ),
+        ]);
+      }
+
+      if (dto.permission && !oldAccess.permission.equals(dto.permission)) {
+        await Promise.all([
+          this.permissionModel.updateOne(
+            { _id: oldAccess.permission },
+            { $pull: { access: id } },
+            { session },
+          ),
+          this.permissionModel.updateOne(
+            { _id: dto.permission },
+            { $addToSet: { access: id } },
+            { session },
+          ),
+        ]);
+      }
+
+      await session.commitTransaction();
+      return updated;
+    } catch (err) {
+      await session.abortTransaction();
+      throw err instanceof NotFoundException
+        ? err
+        : new BadRequestException('Error al actualizar acceso');
+    } finally {
+      session.endSession();
+    }
   }
 
-  remove(id: string) {
-    return this.accessModel.findByIdAndDelete(id);
+  async remove(id: string): Promise<Access> {
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const access = await this.accessModel.findByIdAndDelete(id, { session });
+      if (!access) {
+        throw new NotFoundException(`Access con id ${id} no encontrado`);
+      }
+
+      await this.roleModel.updateOne(
+        { _id: access.role },
+        { $pull: { access: access._id } },
+        { session },
+      );
+
+      await this.permissionModel.updateOne(
+        { _id: access.permission },
+        { $pull: { access: access._id } },
+        { session },
+      );
+
+      await session.commitTransaction();
+      return access;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error instanceof NotFoundException
+        ? error
+        : new BadRequestException('Error al eliminar la relación de acceso');
+    } finally {
+      session.endSession();
+    }
   }
 }
 
