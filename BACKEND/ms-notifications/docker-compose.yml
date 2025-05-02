@@ -1,0 +1,27 @@
+version: "3.8"
+
+networks:
+  default:
+    driver: bridge
+  microservices-network:
+    external: true
+
+services:
+  ms-notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-notifications
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - default
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
