@@ -13,11 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NOTIFY_PORT: ${{ secrets.PORT }}
+      SECURITY_PORT: ${{ secrets.SECURITY_PORT }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
-    strategy:
-      matrix:
-        service: [ms-notifications, ms-security]
+      EMAIL_CONNECTION_STRING: ${{ secrets.EMAIL_CONNECTION_STRING }}
+      EMAIL_SENDER_ADDRESS: ${{ secrets.EMAIL_SENDER_ADDRESS }}
+      TWILIO_SID: ${{ secrets.TWILIO_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+      NOTIFICATION_API_URL: ${{ secrets.NOTIFICATION_API_URL }}
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-qemu-action@v3
