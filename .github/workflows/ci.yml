@@ -95,12 +95,17 @@ jobs:
           docker compose -f BACKEND/ms-security/docker-compose.yml \
             --project-directory BACKEND/ms-security up -d
 
-      - name: Run tests in ms-notifications
+            - name: Run tests in ms-notifications
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
-            --project-directory BACKEND/ms-notifications exec ms-notifications npm test
+            --project-directory BACKEND/ms-notifications \
+            run --rm ms-notifications sh -c "npm ci && npm test"
 
       - name: Run tests in ms-security
+        run: |
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --project-directory BACKEND/ms-security \
+            run --rm ms-security sh -c "npm ci && npm test"
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
             --project-directory BACKEND/ms-security exec ms-security npm test
@@ -131,7 +136,7 @@ jobs:
             BACKEND/ms-notifications/.env
             BACKEND/ms-security/docker-compose.yml
             BACKEND/ms-security/.env
-          target: "~/app/"
+          target: '~/app/'
       - uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
