@@ -1,0 +1,42 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [ main, salazardevelopment ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18  # Cambia si necesitas otra versión
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Build project
+        run: |
+          cd backend
+          npm run build | tee build.log
+
+      - name: Run tests
+        run: |
+          cd backend
+          npm test | tee test.log
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: |
+            backend/build.log
+            backend/test.log
