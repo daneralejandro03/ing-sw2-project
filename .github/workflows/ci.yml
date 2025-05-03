@@ -56,6 +56,11 @@ jobs:
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v1
 
+      - name: Create external network
+        run: |
+          docker network inspect microservices-network || \
+          docker network create microservices-network
+
       - name: Create .env for ms-notifications
         run: |
           cat <<EOF > BACKEND/ms-notifications/.env
@@ -74,21 +79,29 @@ jobs:
 
       - name: Bring up services for testing
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml up -d
-          docker compose -f BACKEND/ms-security/docker-compose.yml up -d
+          docker compose --env-file BACKEND/ms-notifications/.env \
+            -f BACKEND/ms-notifications/docker-compose.yml up -d
+          docker compose --env-file BACKEND/ms-security/.env \
+            -f BACKEND/ms-security/docker-compose.yml up -d
 
       - name: Run tests in ms-notifications container
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml exec ms-notifications npm run test:ci
+          docker compose --env-file BACKEND/ms-notifications/.env \
+            -f BACKEND/ms-notifications/docker-compose.yml \
+            exec ms-notifications npm run test:ci
 
       - name: Run tests in ms-security container
         run: |
-          docker compose -f BACKEND/ms-security/docker-compose.yml exec ms-security npm run test:ci
+          docker compose --env-file BACKEND/ms-security/.env \
+            -f BACKEND/ms-security/docker-compose.yml \
+            exec ms-security npm run test:ci
 
       - name: Tear down Compose services
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml down
-          docker compose -f BACKEND/ms-security/docker-compose.yml down
+          docker compose --env-file BACKEND/ms-notifications/.env \
+            -f BACKEND/ms-notifications/docker-compose.yml down
+          docker compose --env-file BACKEND/ms-security/.env \
+            -f BACKEND/ms-security/docker-compose.yml down
 
   # ================= DEPLOY with Docker Compose =================
   deploy-backend:
