@@ -1,7 +1,7 @@
 name: CI Backend
 
 on:
-  push:
+  push: 
     branches: [ salazardevelopment ]
   pull_request:
     branches: [ salazardevelopment ]  
