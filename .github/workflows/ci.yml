@@ -2,10 +2,10 @@ name: CI Backend
 
 on:
   push:
-    branches: [ salazardevelopment ]  # Usa la rama principal correcta
+    branches: [ salazardevelopment ]
   pull_request:
-    branches: [ salazardevelopment ]  # Asegúrate de que sea esta rama también para PRs
-  workflow_dispatch:  # Esto permite ejecutar el pipeline manualmente desde GitHub
+    branches: [ salazardevelopment ]  
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -19,17 +19,18 @@ jobs:
           cd BACKEND/ms-notifications
           npm install
 
+      - name: Start ms-notifications
+        run: |
+          cd BACKEND/ms-notifications
+          npm run start
+
       - name: Install dependencies for ms-security
         run: |
           cd BACKEND/ms-security
           npm install
 
-      - name: Build ms-notifications
-        run: |
-          cd BACKEND/ms-notifications
-          npm run build
-
-      - name: Build ms-security
+      - name: Start ms-security
         run: |
           cd BACKEND/ms-security
-          npm run build
+          npm run start 
+
