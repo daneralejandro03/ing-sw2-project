@@ -8,37 +8,28 @@ on:
   workflow_dispatch:  # Esto permite ejecutar el pipeline manualmente desde GitHub
 
 jobs:
-  build-and-test:
+  backend:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18  # Cambia si necesitas otra versión
-
-      - name: Install dependencies
+      - name: Install dependencies for ms-notifications
         run: |
-          cd backend
+          cd BACKEND/ms-notifications
           npm install
 
-      - name: Build project
+      - name: Install dependencies for ms-security
         run: |
-          cd backend
-          npm run build | tee build.log
+          cd BACKEND/ms-security
+          npm install
 
-      - name: Run tests
+      - name: Build ms-notifications
         run: |
-          cd backend
-          npm test | tee test.log
+          cd BACKEND/ms-notifications
+          npm run build
 
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs
-          path: |
-            backend/build.log
-            backend/test.log
+      - name: Build ms-security
+        run: |
+          cd BACKEND/ms-security
+          npm run build
