@@ -2,8 +2,10 @@ name: CI Backend
 
 on:
   push:
-    branches: [ main, salazardevelopment ]
+    branches: [ salazardevelopment ]  # Usa la rama principal correcta
   pull_request:
+    branches: [ salazardevelopment ]  # Asegúrate de que sea esta rama también para PRs
+  workflow_dispatch:  # Esto permite ejecutar el pipeline manualmente desde GitHub
 
 jobs:
   build-and-test:
