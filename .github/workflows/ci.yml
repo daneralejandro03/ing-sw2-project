@@ -44,7 +44,7 @@ jobs:
           cd BACKEND/ms-security
           npm install
 
-      # Start ms-notifications
+      
       - name: Start ms-notifications
         run: |
           cd BACKEND/ms-notifications
