@@ -53,20 +53,22 @@ jobs:
         uses: docker/setup-compose-action@v1
 
       - name: Bring up services for testing
-        uses: hoverkraft-tech/compose-action@v2.0.1
-        with:
-          compose-file: BACKEND/docker-compose.yml
+        run: |
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml up -d
+          docker compose -f BACKEND/ms-security/docker-compose.yml up -d
 
       - name: Run tests in ms-notifications container
         run: |
-          docker compose exec ms-notifications npm run test:ci
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml exec ms-notifications npm run test:ci
 
       - name: Run tests in ms-security container
         run: |
-          docker compose exec ms-security npm run test:ci
+          docker compose -f BACKEND/ms-security/docker-compose.yml exec ms-security npm run test:ci
 
       - name: Tear down Compose services
-        run: docker compose down
+        run: |
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml down
+          docker compose -f BACKEND/ms-security/docker-compose.yml down
 
   # ================= DEPLOY with Docker Compose =================
   deploy-backend:
@@ -82,13 +84,15 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Copy Compose file to remote
+      - name: Copy Compose files to remote
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
-          source: "BACKEND/docker-compose.yml"
-          target: "~/app/docker-compose.yml"
+          source: |
+            BACKEND/ms-notifications/docker-compose.yml
+            BACKEND/ms-security/docker-compose.yml
+          target: "~/app/"
 
       - name: Deploy on remote via SSH
         uses: appleboy/ssh-action@v0.1.5
@@ -97,5 +101,5 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           script: |
             cd ~/app
-            docker-compose pull
-            docker-compose up -d --remove-orphans
+            docker-compose -f docker-compose.yml pull
+            docker-compose -f docker-compose.yml up -d --remove-orphans
