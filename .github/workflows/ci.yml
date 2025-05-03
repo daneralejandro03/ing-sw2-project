@@ -11,6 +11,9 @@ jobs:
   # ================= BUILD & PUSH IMAGES =================
   docker-build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ms-notifications, ms-security]
     env:
       NOTIFY_PORT: ${{ secrets.PORT }}
       SECURITY_PORT: ${{ secrets.SECURITY_PORT }}
@@ -30,7 +33,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
         with:
           context: BACKEND/${{ matrix.service }}
           push: true
@@ -42,6 +46,7 @@ jobs:
     needs: docker-build
     env:
       NOTIFY_PORT: ${{ secrets.PORT }}
+      SECURITY_PORT: ${{ secrets.SECURITY_PORT }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       EMAIL_CONNECTION_STRING: ${{ secrets.EMAIL_CONNECTION_STRING }}
@@ -75,7 +80,7 @@ jobs:
         run: |
           cat > BACKEND/ms-security/.env <<EOF
           MONGODB_URI=${{ env.MONGODB_URI }}
-          PORT=${{ env.NOTIFY_PORT }}
+          PORT=${{ env.SECURITY_PORT }}
           NOTIFICATION_API_URL=${{ env.NOTIFICATION_API_URL }}
           JWT_SECRET=${{ env.JWT_SECRET }}
           EOF
@@ -83,26 +88,22 @@ jobs:
       - name: Bring up ms-notifications
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
-            --project-directory BACKEND/ms-notifications \
-            up -d
+            --project-directory BACKEND/ms-notifications up -d
 
       - name: Bring up ms-security
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
-            --project-directory BACKEND/ms-security \
-            up -d
+            --project-directory BACKEND/ms-security up -d
 
       - name: Run tests in ms-notifications
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
-            --project-directory BACKEND/ms-notifications \
-            exec ms-notifications npm run test:ci
+            --project-directory BACKEND/ms-notifications exec ms-notifications npm run test:ci
 
       - name: Run tests in ms-security
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
-            --project-directory BACKEND/ms-security \
-            exec ms-security npm run test:ci
+            --project-directory BACKEND/ms-security exec ms-security npm run test:ci
 
       - name: Tear down services
         run: |
