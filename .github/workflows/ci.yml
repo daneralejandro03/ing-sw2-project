@@ -98,12 +98,12 @@ jobs:
       - name: Run tests in ms-notifications
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
-            --project-directory BACKEND/ms-notifications exec ms-notifications npm run test:ci
+            --project-directory BACKEND/ms-notifications exec ms-notifications npm test
 
       - name: Run tests in ms-security
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
-            --project-directory BACKEND/ms-security exec ms-security npm run test:ci
+            --project-directory BACKEND/ms-security exec ms-security npm test
 
       - name: Tear down services
         run: |
