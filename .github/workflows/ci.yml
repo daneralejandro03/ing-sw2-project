@@ -7,22 +7,20 @@ on:
     branches: [salazardevelopment]
   workflow_dispatch:
 
-# ================= BUILD & PUSH IMAGES =================
+# ================= BUILD & PUSH IMÁGENES =================
 jobs:
   docker-build:
     runs-on: ubuntu-latest
     env:
+      # variables necesarias en el build (opcional)
       NOTIFY_PORT: ${{ secrets.PORT }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
-    strategy:
-      matrix:
-        service: [ms-notifications, ms-security]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up QEMU for multi-platform
+      - name: Set up QEMU (para multi-plataforma)
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -34,14 +32,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push ${{ matrix.service }}
+      - name: Build and push ms-notifications image
         uses: docker/build-push-action@v6
         with:
-          context: BACKEND/${{ matrix.service }}
+          context: BACKEND/ms-notifications
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+          tags: myorg/ms-notifications:latest
 
-  # ================= TEST in containers =================
+      - name: Build and push ms-security image
+        uses: docker/build-push-action@v6
+        with:
+          context: BACKEND/ms-security
+          push: true
+          tags: myorg/ms-security:latest
+
+  # ================= TEST en contenedores =================
   test-backend:
     runs-on: ubuntu-latest
     needs: docker-build
@@ -58,17 +63,15 @@ jobs:
           compose-file: BACKEND/docker-compose.yml
 
       - name: Run tests in ms-notifications container
-        run: |
-          docker compose exec ms-notifications npm run test:ci
+        run: docker compose exec ms-notifications npm run test:ci
 
       - name: Run tests in ms-security container
-        run: |
-          docker compose exec ms-security npm run test:ci
+        run: docker compose exec ms-security npm run test:ci
 
       - name: Tear down Compose services
         run: docker compose down
 
-  # ================= DEPLOY with Docker Compose =================
+  # ================= DEPLOY con Docker Compose =================
   deploy-backend:
     if: github.ref == 'refs/heads/salazardevelopment'
     runs-on: ubuntu-latest
@@ -77,24 +80,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.5.4
+      - name: Set up SSH
+        uses: docker/login-action@v3
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Copy Compose file to remote
+      - name: Copy Compose files via SSH
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "BACKEND/docker-compose.yml"
-          target: "~/app/docker-compose.yml"
+          target: "~/app/"
 
-      - name: Deploy on remote via SSH
+      - name: Deploy on remote with Docker Compose
         uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/app
             docker-compose pull
