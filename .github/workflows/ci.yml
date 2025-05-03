@@ -54,21 +54,27 @@ jobs:
 
       - name: Bring up services for testing
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml up -d
-          docker compose -f BACKEND/ms-security/docker-compose.yml up -d
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --env-file BACKEND/ms-notifications/.env up -d
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --env-file BACKEND/ms-security/.env up -d
 
       - name: Run tests in ms-notifications container
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml exec ms-notifications npm run test:ci
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --env-file BACKEND/ms-notifications/.env exec ms-notifications npm run test:ci
 
       - name: Run tests in ms-security container
         run: |
-          docker compose -f BACKEND/ms-security/docker-compose.yml exec ms-security npm run test:ci
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --env-file BACKEND/ms-security/.env exec ms-security npm run test:ci
 
       - name: Tear down Compose services
         run: |
-          docker compose -f BACKEND/ms-notifications/docker-compose.yml down
-          docker compose -f BACKEND/ms-security/docker-compose.yml down
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --env-file BACKEND/ms-notifications/.env down
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --env-file BACKEND/ms-security/.env down
 
   # ================= DEPLOY with Docker Compose =================
   deploy-backend:
@@ -91,7 +97,9 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           source: |
             BACKEND/ms-notifications/docker-compose.yml
+            BACKEND/ms-notifications/.env
             BACKEND/ms-security/docker-compose.yml
+            BACKEND/ms-security/.env
           target: "~/app/"
 
       - name: Deploy on remote via SSH
