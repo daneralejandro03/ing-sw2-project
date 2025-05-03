@@ -7,8 +7,8 @@ on:
     branches: [salazardevelopment]
   workflow_dispatch:
 
-# ================= BUILD & PUSH IMAGES =================
 jobs:
+  # ================= BUILD & PUSH IMAGES =================
   docker-build:
     runs-on: ubuntu-latest
     env:
@@ -19,23 +19,14 @@ jobs:
       matrix:
         service: [ms-notifications, ms-security]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up QEMU for multi-platform
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: BACKEND/${{ matrix.service }}
           push: true
@@ -50,58 +41,52 @@ jobs:
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v1
+      - uses: actions/checkout@v3
+      - uses: docker/setup-compose-action@v1
 
       - name: Create external network
         run: |
-          docker network inspect microservices-network || \
-          docker network create microservices-network
+          docker network inspect microservices-network || docker network create microservices-network
 
-      - name: Create .env for ms-notifications
+      - name: Create .env files
         run: |
-          cat <<EOF > BACKEND/ms-notifications/.env
-          PORT=${{ env.NOTIFY_PORT }}
-          MONGODB_URI=${{ env.MONGODB_URI }}
-          JWT_SECRET=${{ env.JWT_SECRET }}
-          EOF
+          echo "PORT=${{ env.NOTIFY_PORT }}" > BACKEND/ms-notifications/.env
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> BACKEND/ms-notifications/.env
+          echo "JWT_SECRET=${{ env.JWT_SECRET }}" >> BACKEND/ms-notifications/.env
+          echo "PORT=${{ env.NOTIFY_PORT }}" > BACKEND/ms-security/.env
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> BACKEND/ms-security/.env
+          echo "JWT_SECRET=${{ env.JWT_SECRET }}" >> BACKEND/ms-security/.env
 
-      - name: Create .env for ms-security
+      - name: Bring up ms-notifications
         run: |
-          cat <<EOF > BACKEND/ms-security/.env
-          PORT=${{ env.NOTIFY_PORT }}
-          MONGODB_URI=${{ env.MONGODB_URI }}
-          JWT_SECRET=${{ env.JWT_SECRET }}
-          EOF
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --project-directory BACKEND/ms-notifications \
+            up -d
 
-      - name: Bring up services for testing
+      - name: Bring up ms-security
         run: |
-          docker compose --env-file BACKEND/ms-notifications/.env \
-            -f BACKEND/ms-notifications/docker-compose.yml up -d
-          docker compose --env-file BACKEND/ms-security/.env \
-            -f BACKEND/ms-security/docker-compose.yml up -d
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --project-directory BACKEND/ms-security \
+            up -d
 
-      - name: Run tests in ms-notifications container
+      - name: Run tests in ms-notifications
         run: |
-          docker compose --env-file BACKEND/ms-notifications/.env \
-            -f BACKEND/ms-notifications/docker-compose.yml \
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --project-directory BACKEND/ms-notifications \
             exec ms-notifications npm run test:ci
 
-      - name: Run tests in ms-security container
+      - name: Run tests in ms-security
         run: |
-          docker compose --env-file BACKEND/ms-security/.env \
-            -f BACKEND/ms-security/docker-compose.yml \
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --project-directory BACKEND/ms-security \
             exec ms-security npm run test:ci
 
-      - name: Tear down Compose services
+      - name: Tear down services
         run: |
-          docker compose --env-file BACKEND/ms-notifications/.env \
-            -f BACKEND/ms-notifications/docker-compose.yml down
-          docker compose --env-file BACKEND/ms-security/.env \
-            -f BACKEND/ms-security/docker-compose.yml down
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --project-directory BACKEND/ms-notifications down
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --project-directory BACKEND/ms-security down
 
   # ================= DEPLOY with Docker Compose =================
   deploy-backend:
@@ -109,16 +94,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-backend
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.5.4
+      - uses: actions/checkout@v3
+      - uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Copy Compose files & env to remote
-        uses: appleboy/scp-action@v0.1.5
+      - uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
@@ -127,10 +107,8 @@ jobs:
             BACKEND/ms-notifications/.env
             BACKEND/ms-security/docker-compose.yml
             BACKEND/ms-security/.env
-          target: "~/app/"
-
-      - name: Deploy on remote via SSH
-        uses: appleboy/ssh-action@v0.1.5
+          target: '~/app/'
+      - uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
