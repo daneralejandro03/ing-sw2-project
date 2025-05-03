@@ -85,29 +85,27 @@ jobs:
           JWT_SECRET=${{ env.JWT_SECRET }}
           EOF
 
-      - name: Bring up ms-notifications
+            - name: Bring up ms-notifications (development)
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
             --project-directory BACKEND/ms-notifications up -d
 
-      - name: Bring up ms-security
+      - name: Bring up ms-security (development)
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
             --project-directory BACKEND/ms-security up -d
 
-      - name: Run dev in ms-notifications
+      - name: Tear down development services
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
-            --project-directory BACKEND/ms-notifications \
-            run --rm ms-notifications sh -c "npm ci && npm test"
-
-      - name: Run start:dev in ms-security
-        run: |
+            --project-directory BACKEND/ms-notifications down
           docker compose -f BACKEND/ms-security/docker-compose.yml \
-            --project-directory BACKEND/ms-security \
-            run --rm ms-security sh -c "npm ci && npm test"
-
-      - name: Tear down services
+            --project-directory BACKEND/ms-security down
+        run: |
+          docker compose -f BACKEND/ms-notifications/docker-compose.yml \
+            --project-directory BACKEND/ms-notifications down
+          docker compose -f BACKEND/ms-security/docker-compose.yml \
+            --project-directory BACKEND/ms-security down
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
             --project-directory BACKEND/ms-notifications down
@@ -133,7 +131,7 @@ jobs:
             BACKEND/ms-notifications/.env
             BACKEND/ms-security/docker-compose.yml
             BACKEND/ms-security/.env
-          target: "~/app/"
+          target: '~/app/'
       - uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
