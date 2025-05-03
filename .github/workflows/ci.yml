@@ -40,6 +40,12 @@ jobs:
       NOTIFY_PORT: ${{ secrets.PORT }}
       MONGODB_URI: ${{ secrets.MONGODB_URI }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      EMAIL_CONNECTION_STRING: ${{ secrets.EMAIL_CONNECTION_STRING }}
+      EMAIL_SENDER_ADDRESS: ${{ secrets.EMAIL_SENDER_ADDRESS }}
+      TWILIO_SID: ${{ secrets.TWILIO_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+      NOTIFICATION_API_URL: ${{ secrets.NOTIFICATION_API_URL }}
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-compose-action@v1
@@ -48,14 +54,27 @@ jobs:
         run: |
           docker network inspect microservices-network || docker network create microservices-network
 
-      - name: Create .env files
+      - name: Generate .env for ms-notifications
         run: |
-          echo "PORT=${{ env.NOTIFY_PORT }}" > BACKEND/ms-notifications/.env
-          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> BACKEND/ms-notifications/.env
-          echo "JWT_SECRET=${{ env.JWT_SECRET }}" >> BACKEND/ms-notifications/.env
-          echo "PORT=${{ env.NOTIFY_PORT }}" > BACKEND/ms-security/.env
-          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> BACKEND/ms-security/.env
-          echo "JWT_SECRET=${{ env.JWT_SECRET }}" >> BACKEND/ms-security/.env
+          cat > BACKEND/ms-notifications/.env <<EOF
+          PORT=${{ env.NOTIFY_PORT }}
+          MONGODB_URI=${{ env.MONGODB_URI }}
+          JWT_SECRET=${{ env.JWT_SECRET }}
+          EMAIL_CONNECTION_STRING=${{ env.EMAIL_CONNECTION_STRING }}
+          EMAIL_SENDER_ADDRESS=${{ env.EMAIL_SENDER_ADDRESS }}
+          TWILIO_SID=${{ env.TWILIO_SID }}
+          TWILIO_AUTH_TOKEN=${{ env.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM=${{ env.TWILIO_FROM }}
+          EOF
+
+      - name: Generate .env for ms-security
+        run: |
+          cat > BACKEND/ms-security/.env <<EOF
+          MONGODB_URI=${{ env.MONGODB_URI }}
+          PORT=${{ env.NOTIFY_PORT }}
+          NOTIFICATION_API_URL=${{ env.NOTIFICATION_API_URL }}
+          JWT_SECRET=${{ env.JWT_SECRET }}
+          EOF
 
       - name: Bring up ms-notifications
         run: |
@@ -107,7 +126,7 @@ jobs:
             BACKEND/ms-notifications/.env
             BACKEND/ms-security/docker-compose.yml
             BACKEND/ms-security/.env
-          target: '~/app/'
+          target: "~/app/"
       - uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.REMOTE_HOST }}
