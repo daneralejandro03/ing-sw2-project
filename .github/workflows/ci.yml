@@ -17,7 +17,6 @@ jobs:
       # Set environment variables for ms-notifications
       - name: Set environment variables for ms-notifications
         run: |
-          echo "PORT=${{ secrets.PORT }}" >> $GITHUB_ENV
           echo "EMAIL_CONNECTION_STRING=${{ secrets.EMAIL_CONNECTION_STRING }}" >> $GITHUB_ENV
           echo "EMAIL_SENDER_ADDRESS=${{ secrets.EMAIL_SENDER_ADDRESS }}" >> $GITHUB_ENV
           echo "TWILIO_SID=${{ secrets.TWILIO_SID }}" >> $GITHUB_ENV
@@ -28,7 +27,6 @@ jobs:
       - name: Set environment variables for ms-security
         run: |
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> $GITHUB_ENV
-          echo "PORT=3001" >> $GITHUB_ENV
           echo "NOTIFICATION_API_URL=${{ secrets.NOTIFICATION_API_URL }}" >> $GITHUB_ENV
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
 
@@ -44,14 +42,14 @@ jobs:
           cd BACKEND/ms-security
           npm install
 
-      
+      # Start ms-notifications
       - name: Start ms-notifications
         run: |
           cd BACKEND/ms-notifications
-          npm run start
+          PORT=3001 npm run start &
 
       # Start ms-security
       - name: Start ms-security
         run: |
           cd BACKEND/ms-security
-          npm run start
+          PORT=3002 npm run start
