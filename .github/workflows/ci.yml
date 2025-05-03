@@ -95,13 +95,13 @@ jobs:
           docker compose -f BACKEND/ms-security/docker-compose.yml \
             --project-directory BACKEND/ms-security up -d
 
-      - name: Run tests in ms-notifications
+      - name: Run dev in ms-notifications
         run: |
           docker compose -f BACKEND/ms-notifications/docker-compose.yml \
             --project-directory BACKEND/ms-notifications \
             run --rm ms-notifications sh -c "npm ci && npm test"
 
-      - name: Run tests in ms-security
+      - name: Run start:dev in ms-security
         run: |
           docker compose -f BACKEND/ms-security/docker-compose.yml \
             --project-directory BACKEND/ms-security \
