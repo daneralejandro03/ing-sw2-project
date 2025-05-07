@@ -10,7 +10,7 @@ import {
   Req
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { EmailService } from 'src/email/email.service';
+import { EmailService } from '../email/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AccessGuard } from '../guards/access.guard';

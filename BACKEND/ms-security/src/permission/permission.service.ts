@@ -3,8 +3,8 @@ import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Permission } from 'src/schemas/permission.schema';
-import { Access } from 'src/schemas/access.schema';
+import { Permission } from '../schemas/permission.schema';
+import { Access } from '../schemas/access.schema';
 
 @Injectable()
 export class PermissionService {

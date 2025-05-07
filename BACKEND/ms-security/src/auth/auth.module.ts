@@ -8,7 +8,7 @@ import { User, UserSchema } from '../schemas/user.schema';
 import { Role, RoleSchema } from '../schemas/role.schema';
 import { PassportModule } from '@nestjs/passport';
 import { EmailModule } from '../email/email.module';
-import { SmsModule } from 'src/sms/sms.module';
+import { SmsModule } from '../sms/sms.module';
 import { LocalStrategy } from './local/local.strategy';
 import { JwtAuthStrategy } from './local/jwt.strategy';
 
