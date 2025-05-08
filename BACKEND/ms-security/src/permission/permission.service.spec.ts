@@ -4,9 +4,22 @@ import { PermissionService } from './permission.service';
 describe('PermissionService', () => {
   let service: PermissionService;
 
+  const mockPermissionModel = {}; // Simulación de PermissionModel
+  const mockAccessModel = {};     // Simulación de AccessModel
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [PermissionService],
+      providers: [
+        PermissionService,
+        {
+          provide: 'PermissionModel',
+          useValue: mockPermissionModel,
+        },
+        {
+          provide: 'AccessModel',
+          useValue: mockAccessModel,
+        },
+      ],
     }).compile();
 
     service = module.get<PermissionService>(PermissionService);
