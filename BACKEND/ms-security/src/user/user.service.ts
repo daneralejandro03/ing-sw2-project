@@ -167,4 +167,20 @@ export class UserService {
 
     return this.userModel.findByIdAndDelete(id);
   }
+
+  async addStoreToUser(userId: string, storeId: number): Promise<boolean> {
+    const result = await this.userModel.updateOne(
+      { _id: userId },
+      { $addToSet: { stores: storeId } },
+    ).exec();
+    return result.acknowledged && result.matchedCount > 0;
+  }
+
+  async removeStoreFromUser(userId: string, storeId: number): Promise<boolean> {
+    const result = await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { stores: storeId } },   // remueve todas las ocurrencias
+    ).exec();
+    return result.acknowledged && result.matchedCount > 0;
+  }
 }

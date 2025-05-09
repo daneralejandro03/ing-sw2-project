@@ -7,12 +7,14 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req
+  Req,
+  NotFoundException
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { EmailService } from 'src/email/email.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { StoreDto } from './dto/store.dto';
 import { AccessGuard } from '../guards/access.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '../schemas/user.schema';
@@ -104,5 +106,64 @@ export class UserController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.userService.remove(id, req.user);
+  }
+
+  @Patch(':id/store')
+  @ApiOperation({ summary: 'Asocia una tienda a un usuario' })
+  @ApiParam({ name: 'id', type: String, description: 'ID del usuario' })
+  @ApiBody({ type: StoreDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Tienda asociada correctamente al usuario',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Store añadido al usuario' },
+        storeId: { type: 'number', example: 123 },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async addStore(
+    @Param('id') id: string,
+    @Body() dto: StoreDto,
+  ) {
+    const updated = await this.userService.addStoreToUser(id, dto.storeId);
+    if (!updated) throw new NotFoundException(`User #${id} not found`);
+    return { message: 'Store añadido al usuario', storeId: dto.storeId };
+  }
+
+  @Patch(':id/store/remove')
+  @ApiOperation({ summary: 'Desasocia una tienda de un usuario' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'ID del usuario del que se removerá la tienda',
+  })
+  @ApiBody({
+    type: StoreDto,
+    description: 'DTO que contiene el storeId a desasociar',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tienda removida correctamente del usuario',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Store removido del usuario' },
+        storeId: { type: 'number', example: 123 },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Usuario o tienda no encontrados' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async removeStore(
+    @Param('id') id: string,
+    @Body() dto: StoreDto,
+  ) {
+    const updated = await this.userService.removeStoreFromUser(id, dto.storeId);
+    if (!updated) {
+      throw new NotFoundException(`User #${id} not found`);
+    }
+    return { message: 'Store removido del usuario', storeId: dto.storeId };
   }
 }

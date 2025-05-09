@@ -9,6 +9,7 @@ import {
   Req,
   ParseIntPipe,
   Post,
+  BadRequestException
 } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { Request } from 'express';
@@ -63,7 +64,16 @@ export class StoreController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.storeService.remove(id);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
+  ) {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) {
+      throw new BadRequestException('Token no provisto');
+    }
+    const token = auth.slice(7);
+    await this.storeService.remove(id, token);
+    return { message: `Store #${id} eliminada correctamente` };
   }
 }

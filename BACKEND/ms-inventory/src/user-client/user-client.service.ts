@@ -82,4 +82,58 @@ export class UserClientService {
       throw new InternalServerErrorException('Error fetching user from Security Service');
     }
   }
+
+  async addStoreToUser(
+    userId: string,
+    storeId: number,
+    token: string,
+  ): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.patch(
+          `${this.baseUrl}user/${encodeURIComponent(userId)}/store`,
+          { storeId },
+          { headers: { Authorization: token } },
+        ),
+      );
+    } catch (err: unknown) {
+      const error = err as AxiosError;
+      if (error.response?.status === 404) {
+        throw new NotFoundException(`User #${userId} not found in Security Service`);
+      }
+      if (error.response?.status === 401) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+      throw new InternalServerErrorException('Error updating user in Security Service');
+    }
+  }
+
+  async removeStoreFromUser(
+    userId: string,
+    storeId: number,
+    token: string,
+  ): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.patch(
+          `${this.baseUrl}user/${encodeURIComponent(userId)}/store/remove`,
+          { storeId },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+    } catch (err: unknown) {
+      const error = err as AxiosError;
+      if (error.response?.status === 404) {
+        throw new NotFoundException(
+          `User #${userId} not found in Security Service`,
+        );
+      }
+      if (error.response?.status === 401) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+      throw new InternalServerErrorException(
+        'Error updating user in Security Service: ' + error.message,
+      );
+    }
+  }
 }
