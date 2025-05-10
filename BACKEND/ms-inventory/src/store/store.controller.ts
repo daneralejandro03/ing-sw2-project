@@ -17,20 +17,26 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserTokenDto } from '../user-client/dto/user-token.dto';
+import { Store } from './entities/store.entity';
 
 @Controller('store')
 export class StoreController {
   constructor(private readonly storeService: StoreService) { }
 
   @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@Body() dto: CreateStoreDto, @Req() req: Request) {
+  @Post('city/:cityId/user/:userId')
+  create(
+    @Param('cityId', ParseIntPipe) cityId: number,
+    @Param('userId') userId: string,
+    @Body() dto: CreateStoreDto,
+    @Req() req: Request,
+  ): Promise<Store> {
     const token = req.headers.authorization;
-
     if (!token || !token.startsWith('Bearer ')) {
-      throw new Error('Token no provisto');
+      throw new BadRequestException('Token no provisto');
     }
-    return this.storeService.create(dto, token);
+
+    return this.storeService.create(cityId, userId, dto, token);
   }
 
   @Get()

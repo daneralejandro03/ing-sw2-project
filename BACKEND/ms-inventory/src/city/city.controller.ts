@@ -2,14 +2,18 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { CityService } from './city.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
+import { City } from './entities/city.entity';
 
 @Controller('city')
 export class CityController {
   constructor(private readonly cityService: CityService) { }
 
-  @Post()
-  create(@Body() createCityDto: CreateCityDto) {
-    return this.cityService.create(createCityDto);
+  @Post('departament/:departamentId')
+  create(
+    @Param('departamentId') departamentId: string,
+    @Body() createCityDto: CreateCityDto,
+  ): Promise<City> {
+    return this.cityService.create(+departamentId, createCityDto);
   }
 
   @Get()

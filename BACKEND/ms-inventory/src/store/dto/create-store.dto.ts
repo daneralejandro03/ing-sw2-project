@@ -32,11 +32,4 @@ export class CreateStoreDto {
 
     @IsString() @IsNotEmpty() state: string;
 
-    @Type(() => Number)
-    @IsInt()
-    cityId: number;
-
-    @IsString()
-    @IsNotEmpty()
-    userId: string;
 }

@@ -17,7 +17,13 @@ export class StoreService {
     private readonly dataSource: DataSource,
   ) { }
 
-  async create(dto: CreateStoreDto, token: string): Promise<Store> {
+  async create(
+    cityId: number,
+    userId: string,
+    dto: CreateStoreDto,
+    token: string,
+  ): Promise<Store> {
+
     const {
       name,
       address,
@@ -25,9 +31,7 @@ export class StoreService {
       length,
       latitude,
       capacity,
-      state,
-      cityId,
-      userId,
+      state
     } = dto;
 
     if (capacity <= 0) {
@@ -41,7 +45,7 @@ export class StoreService {
 
     await this.userClient.verifyUserExists(userId, token);
 
-    const runner = this.dataSource.createQueryRunner();
+    const runner: QueryRunner = this.dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();
 
@@ -88,14 +92,16 @@ export class StoreService {
     id: number,
     dto: UpdateStoreDto,
   ): Promise<Store> {
-    const store = await this.findOne(id);
-    Object.assign(store, dto);
-    if (dto.cityId) {
-      const city = await this.cityRepo.findOne({ where: { id: dto.cityId } });
-      if (!city) throw new NotFoundException(`City #${dto.cityId} not found`);
-      store.city = city;
+    const store = await this.storeRepo.findOne({ where: { id } });
+    if (!store) {
+      throw new NotFoundException(`Store #${id} not found`);
     }
-    return this.storeRepo.save(store);
+    Object.assign(store, dto);
+    try {
+      return await this.storeRepo.save(store);
+    } catch (err) {
+      throw new InternalServerErrorException(`Error actualizando la tienda: ${err}`);
+    }
   }
 
   async remove(id: number, token: string): Promise<void> {
