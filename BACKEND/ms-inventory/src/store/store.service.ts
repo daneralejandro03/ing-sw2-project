@@ -76,13 +76,15 @@ export class StoreService {
   }
 
   async findAll(): Promise<Store[]> {
-    return this.storeRepo.find();
+    return this.storeRepo.find({
+      relations: ['city', 'inventory'],
+    });
   }
 
   async findOne(id: number): Promise<Store> {
     const store = await this.storeRepo.findOne({
       where: { id },
-      relations: ['city'],
+      relations: ['city', 'inventory'],
     });
     if (!store) throw new NotFoundException(`Store #${id} not found`);
     return store;

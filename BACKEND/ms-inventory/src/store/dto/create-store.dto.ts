@@ -2,6 +2,7 @@ import {
     IsString,
     IsNotEmpty,
     IsInt,
+    IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -19,17 +20,19 @@ export class CreateStoreDto {
     postalCode: string;
 
     @Type(() => Number)
-    @IsInt()
+    @IsNumber()
     length: number;
 
     @Type(() => Number)
-    @IsInt()
+    @IsNumber()
     latitude: number;
 
     @Type(() => Number)
     @IsInt()
     capacity: number;
 
-    @IsString() @IsNotEmpty() state: string;
+    @IsString()
+    @IsNotEmpty()
+    state: string;
 
 }

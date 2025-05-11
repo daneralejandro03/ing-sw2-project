@@ -4,10 +4,12 @@ import {
     Column,
     ManyToOne,
     JoinColumn,
+    OneToMany,
 } from 'typeorm';
 import { City } from '../../city/entities/city.entity';
+import { Inventory } from '../../inventory/entities/inventory.entity';
 
-@Entity('stores')
+@Entity({ name: 'stores' })
 export class Store {
     @PrimaryGeneratedColumn({ name: '_idStore', type: 'int' })
     id: number;
@@ -42,5 +44,9 @@ export class Store {
 
     @Column({ type: 'varchar', length: 50 })
     userId: string;
+
+
+    @OneToMany(() => Inventory, inventory => inventory.store, { cascade: true })
+    inventory: Inventory[];
 
 }
