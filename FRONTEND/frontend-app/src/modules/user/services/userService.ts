@@ -1,0 +1,16 @@
+import axios from 'axios';
+import endpoints from './userEndpoints';
+import type { ChangePassword } from '../types/User';
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_APP_API_AWS_ENDPOINT_PREFIJO || 'http://localhost:3001/api/v1',
+});
+
+const userService = {
+  async changePassword(payload: ChangePassword){
+    const { data } = await api.post(endpoints.changePassword, payload);
+    return data;
+  },
+};
+
+export default userService;
