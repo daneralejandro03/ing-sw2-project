@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -56,9 +57,37 @@ export class SupplierService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.suppRepo.delete(id);
-    if (result.affected === 0) {
+    const supplier = await this.suppRepo.findOne({
+      where: { id },
+      relations: ['provision'],
+    });
+    if (!supplier) {
       throw new NotFoundException(`Supplier #${id} no encontrado`);
     }
+
+    if (supplier.provision.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar supplier #${id} porque tiene ${supplier.provision.length} provisión(es) asociada(s)`
+      );
+    }
+    const res = await this.suppRepo.delete(id);
+    if (res.affected === 0) {
+      throw new NotFoundException(`Supplier #${id} no encontrado`);
+    }
+  }
+
+  async findOneByName(name: string): Promise<Supplier | null> {
+    const supplier = await this.suppRepo.findOne({
+      where: { name },
+    });
+    return supplier ? supplier : null;
+  }
+
+  async findByNameOrCreate(name: string): Promise<Supplier> {
+    const supplier = await this.suppRepo.findOne({ where: { name } });
+    if (supplier) return supplier;
+
+    const newSupplier = this.suppRepo.create({ name });
+    return this.suppRepo.save(newSupplier);
   }
 }

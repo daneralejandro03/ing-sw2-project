@@ -1,6 +1,4 @@
-// src/product/product.service.ts
-
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -46,6 +44,26 @@ export class ProductService {
   }
 
   async remove(id: number): Promise<void> {
+    const product = await this.repo.findOne({
+      where: { id },
+      relations: ['inventory', 'provision'],
+    });
+    if (!product) {
+      throw new NotFoundException(`Product #${id} not found`);
+    }
+
+    if (product.inventory.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete product ${id} because it has ${product.inventory.length} inventory record(s)`
+      );
+    }
+
+    if (product.provision.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete product ${id} because it has ${product.provision.length} provision(s)`
+      );
+    }
+
     const res = await this.repo.delete(id);
     if (res.affected === 0) {
       throw new NotFoundException(`Product #${id} not found`);

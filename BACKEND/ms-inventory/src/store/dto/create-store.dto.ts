@@ -13,6 +13,10 @@ export class CreateStoreDto {
 
     @IsString()
     @IsNotEmpty()
+    code: string;
+
+    @IsString()
+    @IsNotEmpty()
     address: string;
 
     @IsString()
@@ -21,11 +25,12 @@ export class CreateStoreDto {
 
     @Type(() => Number)
     @IsNumber()
-    length: number;
+    longitude: number;
 
     @Type(() => Number)
     @IsNumber()
     latitude: number;
+
 
     @Type(() => Number)
     @IsInt()

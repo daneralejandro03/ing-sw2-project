@@ -39,4 +39,12 @@ export class DepartamentService {
       throw new NotFoundException(`Departament #${id} not found`);
     }
   }
+
+  async findByNameOrCreate(name: string): Promise<Departament> {
+    const dep = await this.repo.findOne({ where: { name } });
+    if (dep) return dep;
+
+    const newDep = this.repo.create({ name });
+    return this.repo.save(newDep);
+  }
 }

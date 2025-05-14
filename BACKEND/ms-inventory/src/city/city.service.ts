@@ -65,4 +65,24 @@ export class CityService {
       where: { departament: { id: departamentId } }
     });
   }
+
+  async findOneCityName(name: string): Promise<City> {
+    const city = await this.cityRepo.findOne({
+      where: { name },
+      relations: ['departament'],
+    });
+    if (!city) throw new NotFoundException(`City #${name} not found`);
+    return city;
+  }
+
+  async findByNameOrCreate(departamentId: number, name: string): Promise<City> {
+    const city = await this.cityRepo.findOne({ where: { name } });
+    if (city) return city;
+
+    const dept = await this.departamentRepo.findOne({ where: { id: departamentId } });
+    if (!dept) throw new NotFoundException(`Departament #${departamentId} not found`);
+
+    const newCity = this.cityRepo.create({ name, departament: dept });
+    return this.cityRepo.save(newCity);
+  }
 }

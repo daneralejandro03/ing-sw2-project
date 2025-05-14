@@ -44,20 +44,22 @@ export class UserController {
     private readonly emailService: EmailService,
   ) { }
 
-  @Post()
+  @Post(':roleId')
   @ApiOperation({ summary: 'Crear un nuevo usuario' })
+  @ApiParam({ name: 'roleId', type: String, description: 'ID del rol a asignar' })
   @ApiBody({ type: CreateUserDto, description: 'Datos para nuevo usuario' })
   @ApiResponse({ status: 201, description: 'Usuario creado correctamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos o usuario ya existe.' })
   async create(
+    @Param('roleId') roleId: string,
     @Body() createUserDto: CreateUserDto,
     @Body('cellPhone', ColombianPhonePipe) cellPhone: number,
     @Req() req: AuthenticatedRequest,
   ) {
     const currentUser = req.user;
     console.log('Usuario actual:', currentUser);
-    createUserDto.cellPhone = cellPhone;
-    return this.userService.create(createUserDto, currentUser);
+    createUserDto.cellPhone = cellPhone;;
+    return this.userService.create(createUserDto, roleId, currentUser);
   }
 
   @Get()
@@ -77,6 +79,16 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async findOne(@Param('id') id: string) {
     return this.userService.findOne(id);
+  }
+
+  @Get('email/:email')
+  @ApiOperation({ summary: 'Obtener un usuario por su Email' })
+  @ApiParam({ name: 'email', type: String, description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado.' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  async findOneEmail(@Param('email') email: string) {
+    return this.userService.findOneEmail(email);
   }
 
   @Patch(':id')

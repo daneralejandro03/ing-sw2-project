@@ -44,4 +44,19 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
   }
+
+  async findOneByName(name: string): Promise<Category | null> {
+    const category = await this.categoryRepo.findOne({
+      where: { name },
+    });
+    return category ? category : null;
+  }
+
+  async findByNameOrCreate(name: string): Promise<Category> {
+    const category = await this.categoryRepo.findOne({ where: { name } });
+    if (category) return category;
+
+    const newCategory = this.categoryRepo.create({ name });
+    return this.categoryRepo.save(newCategory);
+  }
 }

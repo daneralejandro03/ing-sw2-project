@@ -26,9 +26,10 @@ export class StoreService {
 
     const {
       name,
+      code,
       address,
       postalCode,
-      length,
+      longitude,
       latitude,
       capacity,
       state
@@ -52,9 +53,10 @@ export class StoreService {
     try {
       const store = runner.manager.create(Store, {
         name,
+        code,
         address,
         postalCode,
-        length,
+        longitude,
         latitude,
         capacity,
         state,
@@ -90,6 +92,14 @@ export class StoreService {
     return store;
   }
 
+  async findByCode(code: string): Promise<Store | null> {
+    const store = await this.storeRepo.findOne({
+      where: { code },
+      relations: ['city', 'inventory'],
+    });
+    return store ? store : null;
+  }
+
   async update(
     id: number,
     dto: UpdateStoreDto,
@@ -107,9 +117,18 @@ export class StoreService {
   }
 
   async remove(id: number, token: string): Promise<void> {
-    const store = await this.storeRepo.findOne({ where: { id } });
+    const store = await this.storeRepo.findOne({
+      where: { id },
+      relations: ['inventory'],
+    });
     if (!store) {
       throw new NotFoundException(`Store #${id} not found`);
+    }
+
+    if (store.inventory.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete store ${id} because it has ${store.inventory.length} inventory record(s)`
+      );
     }
 
     const runner: QueryRunner = this.dataSource.createQueryRunner();
@@ -127,10 +146,18 @@ export class StoreService {
       await runner.commitTransaction();
     } catch (err) {
       await runner.rollbackTransaction();
-      throw new InternalServerErrorException(`Error eliminando la tienda: ${err}`);
+      throw new InternalServerErrorException(`Error deleting store: ${err}`);
     } finally {
       await runner.release();
     }
+  }
+
+  async findByNameOne(name: string): Promise<Store | null> {
+    const store = await this.storeRepo.findOne({
+      where: { name },
+      relations: ['city', 'inventory'],
+    });
+    return store ? store : null;
   }
 
   async findAllUsers(token: string): Promise<UserTokenDto[]> {
@@ -140,5 +167,14 @@ export class StoreService {
       email: u.email,
       role: u.role,
     }));
+  }
+
+  async findOneByUser(userId: string): Promise<Store[]> {
+    const stores = await this.storeRepo.find({
+      where: { userId },
+      relations: ['city', 'inventory'],
+    });
+    if (!stores) throw new NotFoundException(`Store #${userId} not found`);
+    return stores;
   }
 }

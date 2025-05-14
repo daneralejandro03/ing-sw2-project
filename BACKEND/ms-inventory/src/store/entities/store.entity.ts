@@ -14,6 +14,9 @@ export class Store {
     @PrimaryGeneratedColumn({ name: '_idStore', type: 'int' })
     id: number;
 
+    @Column({ type: 'varchar', length: 50, unique: true })
+    code: string;
+
     @Column({ type: 'varchar', length: 100 })
     name: string;
 
@@ -23,11 +26,11 @@ export class Store {
     @Column({ name: 'postalCode', type: 'varchar', length: 20 })
     postalCode: string;
 
-    @Column({ type: 'float' })
-    length: number;
-
-    @Column({ type: 'float' })
+    @Column({ name: 'latitude', type: 'float' })
     latitude: number;
+
+    @Column({ name: 'longitude', type: 'float' })
+    longitude: number;
 
     @Column({ type: 'int' })
     capacity: number;
@@ -42,11 +45,9 @@ export class Store {
     @JoinColumn({ name: 'cityId' })
     city: City;
 
-    @Column({ type: 'varchar', length: 50 })
+    @Column({ name: 'userId', type: 'varchar', length: 50 })
     userId: string;
-
 
     @OneToMany(() => Inventory, inventory => inventory.store, { cascade: true })
     inventory: Inventory[];
-
 }

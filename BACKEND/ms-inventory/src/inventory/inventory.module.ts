@@ -16,5 +16,6 @@ import { StoreModule } from 'src/store/store.module';
   ],
   controllers: [InventoryController],
   providers: [InventoryService],
+  exports: [InventoryService, TypeOrmModule],
 })
 export class InventoryModule { }
