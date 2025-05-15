@@ -4,11 +4,13 @@ import {
     ManyToOne,
     JoinColumn,
     Unique,
+    OneToMany,
 } from 'typeorm';
 import { Store } from '../../store/entities/store.entity';
 import { Product } from '../../product/entities/product.entity';
+import { Motion } from 'src/motion/entities/motion.entity';
 
-@Entity('inventory')
+@Entity('inventorys')
 @Unique(['store', 'product'])
 export class Inventory {
     @PrimaryGeneratedColumn({ name: '_idInventory', type: 'int' })
@@ -27,4 +29,12 @@ export class Inventory {
     })
     @JoinColumn({ name: 'productId' })
     product: Product;
+
+    @OneToMany(() => Motion, motion => motion.inventory, {
+        cascade: true,
+        onDelete: 'SET NULL',
+    })
+    motions: Motion[];
 }
+
+

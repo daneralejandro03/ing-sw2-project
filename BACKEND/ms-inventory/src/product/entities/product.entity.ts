@@ -57,7 +57,7 @@ export class Product {
     @Column({ type: 'boolean', default: false })
     isFragile: boolean;
 
-    @Column({ name: 'requiresRefrigeration', type: 'boolean', default: false })
+    @Column({ name: 'requiresRefurbishment', type: 'boolean', default: false })
     requiresRefurbishment: boolean;
 
     @Column({ type: 'varchar', length: 50 })

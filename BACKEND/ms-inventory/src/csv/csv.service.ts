@@ -42,9 +42,7 @@ export class CsvService {
     private readonly inventoryService: InventoryService,
   ) { }
 
-  /**
-   * 1) Crea/actualiza Departaments y Cities en batch.
-   */
+
   async uploadDepartamentsAndCitys(buffer: Buffer): Promise<void> {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
@@ -58,7 +56,6 @@ export class CsvService {
         trim: true,
       }) as CsvRow[];
 
-      // Departaments únicos
       const deptNames = Array.from(
         new Set(records.map(r => r.DEPARTAMENTO).filter(n => !!n))
       );
@@ -67,7 +64,6 @@ export class CsvService {
       });
       const deptMap = new Map(existingDepts.map(d => [d.name, d]));
 
-      // Crear Departaments faltantes
       const toCreateDepts = deptNames
         .filter(name => !deptMap.has(name))
         .map(name => qr.manager.create(Departament, { name }));
@@ -76,7 +72,6 @@ export class CsvService {
         for (const d of saved) deptMap.set(d.name, d);
       }
 
-      // Cities por departament
       const deptIds = Array.from(deptMap.values()).map(d => d.id);
       const existingCities = await qr.manager.find(City, {
         relations: ['departament'],
@@ -129,10 +124,9 @@ export class CsvService {
     let created = 0;
     let skipped = 0;
 
-    const limit = pLimit(5); // máximo 5 batches paralelos (ajustable)
-    const batchSize = 50;    // tamaño de cada batch (ajustable)
+    const limit = pLimit(5);
+    const batchSize = 50;
 
-    // Procesar cada batch secuencialmente fila a fila (tu lógica intacta)
     const processBatch = async (batch: StoreCsvRow[]) => {
       for (const row of batch) {
         const required = [
@@ -216,13 +210,11 @@ export class CsvService {
       }
     };
 
-    // Divide en batches
     const batches: StoreCsvRow[][] = [];
     for (let i = 0; i < rows.length; i += batchSize) {
       batches.push(rows.slice(i, i + batchSize));
     }
 
-    // Ejecuta batches en paralelo con límite de concurrencia
     await Promise.all(
       batches.map(batch => limit(() => processBatch(batch)))
     );
@@ -242,10 +234,9 @@ export class CsvService {
     let created = 0;
     let skipped = 0;
 
-    const limit = pLimit(5);   // límite de batches paralelos (ajustable)
-    const batchSize = 50;      // tamaño de cada batch (ajustable)
+    const limit = pLimit(5);
+    const batchSize = 50;
 
-    // Función para procesar un batch fila a fila secuencialmente
     const processBatch = async (batch: ProductCsvRow[]) => {
       for (const row of batch) {
         const required = [
@@ -319,13 +310,11 @@ export class CsvService {
       }
     };
 
-    // Dividir las filas en batches
     const batches: ProductCsvRow[][] = [];
     for (let i = 0; i < rows.length; i += batchSize) {
       batches.push(rows.slice(i, i + batchSize));
     }
 
-    // Ejecutar batches en paralelo con límite de concurrencia
     await Promise.all(
       batches.map(batch => limit(() => processBatch(batch)))
     );

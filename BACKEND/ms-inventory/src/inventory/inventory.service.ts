@@ -9,6 +9,8 @@ import { Repository } from 'typeorm';
 import { Inventory } from './entities/inventory.entity';
 import { Store } from '../store/entities/store.entity';
 import { Product } from '../product/entities/product.entity';
+import { Motion } from '../motion/entities/motion.entity';
+import { Type } from '../motion/enumeration/type.enumeration';
 
 @Injectable()
 export class InventoryService {
@@ -19,6 +21,8 @@ export class InventoryService {
     private readonly storeRepo: Repository<Store>,
     @InjectRepository(Product)
     private readonly prodRepo: Repository<Product>,
+    @InjectRepository(Motion)
+    private readonly motionRepo: Repository<Motion>,
   ) { }
 
   async create(storeId: number, productId: number): Promise<Inventory> {
@@ -38,8 +42,19 @@ export class InventoryService {
     }
 
     try {
+      // 1) Creamos y salvamos el inventario
       const inv = this.invRepo.create({ store, product });
-      return await this.invRepo.save(inv);
+      const savedInv = await this.invRepo.save(inv);
+
+      const motion = this.motionRepo.create({
+        date: new Date(),
+        type: Type.IN,
+        amount: product.stock,
+        inventory: savedInv,
+      });
+      await this.motionRepo.save(motion);
+
+      return savedInv;
     } catch (err) {
       throw new InternalServerErrorException(`Error creating inventory: ${err}`);
     }

@@ -15,6 +15,8 @@ import { ProvisionModule } from './provision/provision.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { CsvModule } from './csv/csv.module';
 import { RoleClientModule } from './role-client/role-client.module';
+import { MotionModule } from './motion/motion.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -61,6 +63,10 @@ import { RoleClientModule } from './role-client/role-client.module';
     CsvModule,
 
     RoleClientModule,
+
+    MotionModule,
+
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],
