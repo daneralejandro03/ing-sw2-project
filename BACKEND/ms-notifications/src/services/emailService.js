@@ -44,6 +44,21 @@ class EmailService {
       };
     } catch (error) {
       console.error("Error en servicio de email:", error);
+
+      // Manejo específico para EmailDroppedAllRecipientsSuppressed
+      if (
+        error.code === "EmailDroppedAllRecipientsSuppressed" ||
+        error.message.includes("EmailDroppedAllRecipientsSuppressed")
+      ) {
+        return {
+          status: "suppressed",
+          messageId: null,
+          success: false,
+          reason:
+            "El destinatario está en la lista de supresión y el correo no fue enviado.",
+        };
+      }
+
       throw new Error(`Error al enviar el correo: ${error.message}`);
     }
   }

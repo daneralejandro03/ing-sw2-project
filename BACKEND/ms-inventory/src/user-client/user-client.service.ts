@@ -68,6 +68,7 @@ export class UserClientService {
           { headers: { Authorization: token } },
         ),
       );
+      console.log('findByEmail', resp.data);
       return resp.data;
     } catch (err: unknown) {
       const error = err as AxiosError;

@@ -2,12 +2,12 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { DataSource, In, QueryRunner } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { parse } from 'csv-parse/sync';
 
 import { Departament } from '../departament/entities/departament.entity';
 import { City } from '../city/entities/city.entity';
-
+import pLimit from '@common.js/p-limit';
 
 import { UserClientService } from '../user-client/user-client.service';
 import { RoleClientService } from '../role-client/role-client.service';
@@ -117,6 +117,7 @@ export class CsvService {
   }
 
   async importStores(buffer: Buffer, token: string): Promise<{ created: number; skipped: number }> {
+
     const text = buffer.toString('utf-8');
     const rows = parse(text, {
       delimiter: ';',
@@ -125,99 +126,106 @@ export class CsvService {
       trim: true,
     }) as StoreCsvRow[];
 
-    let created = 0, skipped = 0;
+    let created = 0;
+    let skipped = 0;
 
-    for (const row of rows) {
-      // validación básica
-      const required = [
-        'id_almacen', 'nombre_almacen', 'direccion', 'ciudad',
-        'departamento', 'pais', 'codigo_postal', 'latitud', 'longitud',
-        'gerente', 'telefono', 'email', 'capacidad_m2', 'estado'
-      ];
-      if (required.some(f => !row[f])) {
-        skipped++;
-        continue;
-      }
+    const limit = pLimit(5); // máximo 5 batches paralelos (ajustable)
+    const batchSize = 50;    // tamaño de cada batch (ajustable)
 
-      const qr: QueryRunner = this.dataSource.createQueryRunner();
-      await qr.connect(); await qr.startTransaction();
-      try {
-        // 1) aseguramos departamento (y país, si quisieras modelarlo)
-        const dep = await this.departService.findByNameOrCreate(row.departamento);
-
-        // 2) aseguramos ciudad
-        const city = await this.cityService.findByNameOrCreate(dep.id, row.ciudad);
-
-        // 3) verificamos si ya existe store con el nombre
-        const already = await this.storeService.findByNameOne(row.nombre_almacen).catch(() => null);
-        if (already) {
+    // Procesar cada batch secuencialmente fila a fila (tu lógica intacta)
+    const processBatch = async (batch: StoreCsvRow[]) => {
+      for (const row of batch) {
+        const required = [
+          'id_almacen', 'nombre_almacen', 'direccion', 'ciudad', 'departamento',
+          'pais', 'codigo_postal', 'latitud', 'longitud', 'gerente', 'telefono',
+          'email', 'capacidad_m2', 'estado',
+        ];
+        if (required.some(f => !row[f])) {
           skipped++;
-          await qr.rollbackTransaction();
           continue;
         }
 
-        // 4) buscamos o creamos usuario gerente
-        let userId: string;
+        const qr = this.dataSource.createQueryRunner();
+        await qr.connect();
+        await qr.startTransaction();
         try {
-          console.log('Buscando usuario por email:', row.email);
-          const user = await this.userClient.findByEmail(row.email, token);
-          console.log('Usuario', user)
-          if (!user) {
-            throw new Error('Usuario no encontrado');
-          }
-          userId = user.id;
-          console.log('Usuario encontrado:', userId);
+          const dep = await this.departService.findByNameOrCreate(row.departamento);
+          const city = await this.cityService.findByNameOrCreate(dep.id, row.ciudad);
 
-        } catch {
-          // creamos rol Manager si no existe
-          const roleId = await this.roleClient.ensureRole('Manager', token);
-          const [first, ...rest] = row.gerente.split(' ');
-          const createdUser = await this.userClient.createUserWithRole(
-            roleId,
+          const already = await this.storeService.findByNameOne(row.nombre_almacen).catch(() => null);
+          if (already) {
+            skipped++;
+            await qr.rollbackTransaction();
+            continue;
+          }
+
+          let userId: string;
+          try {
+            console.log('Buscando usuario por email:', row.email);
+            const user = await this.userClient.findByEmail(row.email, token);
+            userId = user.id;
+            console.log('Usuario encontrado:', userId);
+          } catch {
+            const roleId = await this.roleClient.ensureRole('Manager', token);
+            const [first, ...rest] = row.gerente.split(' ');
+            const createdUser = await this.userClient.createUserWithRole(
+              roleId,
+              {
+                name: first,
+                lastName: rest.join(' '),
+                gender: 'Masculino',
+                email: row.email,
+                password: 'DefaultP@ss123',
+                cellPhone: 3145919465,
+                landline: 0,
+                IDType: 'CC',
+                IDNumber: Math.random().toString().slice(2, 10),
+              },
+              token,
+            );
+            const userEmail = await this.userClient.findByEmail(createdUser.user.email, token);
+            userId = userEmail.id;
+            console.log('Usuario creado:', userId);
+          }
+
+          await this.storeService.create(
+            city.id,
+            userId,
             {
-              name: first,
-              lastName: rest.join(' '),
-              gender: 'Masculino',
-              email: row.email,
-              password: 'DefaultP@ss123',
-              cellPhone: 3145919465,
-              landline: 0,
-              IDType: 'CC',
-              IDNumber: Math.random().toString().slice(2, 10),
+              code: row.id_almacen,
+              name: row.nombre_almacen,
+              address: row.direccion,
+              postalCode: row.codigo_postal,
+              longitude: parseFloat(row.longitud),
+              latitude: parseFloat(row.latitud),
+              capacity: parseInt(row.capacidad_m2, 10),
+              state: row.estado,
             },
             token,
           );
-          userId = createdUser.user._id;
+
+          await qr.commitTransaction();
+          created++;
+        } catch (err) {
+          console.error('Error al procesar fila:', row, err);
+          await qr.rollbackTransaction();
+          skipped++;
+        } finally {
+          await qr.release();
         }
-
-        // 5) creamos la store vía StoreService (usa su propio QueryRunner internamente)
-        await this.storeService.create(
-          city.id,
-          userId,
-          {
-            code: row.id_almacen,
-            name: row.nombre_almacen,
-            address: row.direccion,
-            postalCode: row.codigo_postal,
-            longitude: parseFloat(row.longitud),
-            latitude: parseFloat(row.latitud),
-            capacity: parseInt(row.capacidad_m2, 10),
-            state: row.estado,
-          },
-          token,
-        );
-
-        await qr.commitTransaction();
-        created++;
-      } catch (err) {
-        console.error('Error al procesar fila:', row, err);
-        await qr.rollbackTransaction();
-        // loguear err.message
-        skipped++;
-      } finally {
-        await qr.release();
       }
+    };
+
+    // Divide en batches
+    const batches: StoreCsvRow[][] = [];
+    for (let i = 0; i < rows.length; i += batchSize) {
+      batches.push(rows.slice(i, i + batchSize));
     }
+
+    // Ejecuta batches en paralelo con límite de concurrencia
+    await Promise.all(
+      batches.map(batch => limit(() => processBatch(batch)))
+    );
 
     return { created, skipped };
   }
@@ -231,76 +239,96 @@ export class CsvService {
       trim: true,
     }) as ProductCsvRow[];
 
-    let created = 0, skipped = 0;
+    let created = 0;
+    let skipped = 0;
 
-    for (const row of rows) {
-      const required = [
-        'id_producto', 'id_almacen', 'nombre_producto', 'categoria', 'descripcion',
-        'sku', 'codigo_barras', 'precio_unitario', 'cantidad_stock', 'nivel_reorden',
-        'ultima_reposicion', 'peso_kg', 'dimensiones_cm', 'es_fragil',
-        'requiere_refrigeracion', 'estado'
-      ];
-      if (required.some(f => !row[f])) { skipped++; continue; }
+    const limit = pLimit(5);   // límite de batches paralelos (ajustable)
+    const batchSize = 50;      // tamaño de cada batch (ajustable)
 
-      const qr: QueryRunner = this.dataSource.createQueryRunner();
-      await qr.connect();
-      await qr.startTransaction();
-
-      try {
-        // 1) tienda
-        const store = await this.storeService.findByCode(row.id_almacen);
-        if (!store) { skipped++; await qr.rollbackTransaction(); continue; }
-
-        // 2) categoría
-        const category = await this.categoryService.findByNameOrCreate(row.categoria);
-
-        // 3) parsear dateEntry
-        const [d, m, y] = row.ultima_reposicion.split('/');
-        const dateEntry = new Date(+y, +m - 1, +d);
-
-        // 4) parsear expirationDate o usar dateEntry
-        let expirationDate = dateEntry;
-        if (row.fecha_vencimiento) {
-          const [dd, mm, yy] = row.fecha_vencimiento.split('/');
-          expirationDate = new Date(+yy, +mm - 1, +dd);
+    // Función para procesar un batch fila a fila secuencialmente
+    const processBatch = async (batch: ProductCsvRow[]) => {
+      for (const row of batch) {
+        const required = [
+          'id_producto', 'id_almacen', 'nombre_producto', 'categoria', 'descripcion',
+          'sku', 'codigo_barras', 'precio_unitario', 'cantidad_stock', 'nivel_reorden',
+          'ultima_reposicion', 'peso_kg', 'dimensiones_cm', 'es_fragil',
+          'requiere_refrigeracion', 'estado'
+        ];
+        if (required.some(f => !row[f])) {
+          skipped++;
+          continue;
         }
 
-        // 5) crear producto
-        const [lengthCm, widthCm, heightCm] = row.dimensiones_cm.split('x').map(n => parseFloat(n) || 0);
-        const product = await this.productService.create(category.id, {
-          name: row.nombre_producto,
-          description: row.descripcion,
-          sku: row.sku,
-          barcode: row.codigo_barras,
-          unitPrice: parseFloat(row.precio_unitario),
-          stock: parseInt(row.cantidad_stock, 10),
-          levelReorder: parseInt(row.nivel_reorden, 10),
-          dateEntry,
-          expirationDate,
-          weightKg: parseFloat(row.peso_kg),
-          lengthCm,
-          widthCm,
-          heightCm,
-          isFragile: row.es_fragil.toLowerCase() === 'true',
-          requiresRefurbishment: row.requiere_refrigeracion.toLowerCase() === 'true',
-          status: row.estado,
-        });
+        const qr = this.dataSource.createQueryRunner();
+        await qr.connect();
+        await qr.startTransaction();
 
-        // 6) supplier + provision + inventory
-        const supplier = await this.supplierService.findByNameOrCreate(row.id_proveedor);
-        await this.provisionService.create(product.id, supplier.id);
-        await this.inventoryService.create(store.id, product.id);
+        try {
+          const store = await this.storeService.findByCode(row.id_almacen);
+          if (!store) {
+            skipped++;
+            await qr.rollbackTransaction();
+            continue;
+          }
 
-        await qr.commitTransaction();
-        created++;
-      } catch (err) {
-        console.error('Error importProducts fila:', row, err);
-        await qr.rollbackTransaction();
-        skipped++;
-      } finally {
-        await qr.release();
+          const category = await this.categoryService.findByNameOrCreate(row.categoria);
+
+          const [d, m, y] = row.ultima_reposicion.split('/');
+          const dateEntry = new Date(+y, +m - 1, +d);
+
+          let expirationDate = dateEntry;
+          if (row.fecha_vencimiento) {
+            const [dd, mm, yy] = row.fecha_vencimiento.split('/');
+            expirationDate = new Date(+yy, +mm - 1, +dd);
+          }
+
+          const [lengthCm, widthCm, heightCm] = row.dimensiones_cm.split('x').map(n => parseFloat(n) || 0);
+
+          const product = await this.productService.create(category.id, {
+            name: row.nombre_producto,
+            description: row.descripcion,
+            sku: row.sku,
+            barcode: row.codigo_barras,
+            unitPrice: parseFloat(row.precio_unitario),
+            stock: parseInt(row.cantidad_stock, 10),
+            levelReorder: parseInt(row.nivel_reorden, 10),
+            dateEntry,
+            expirationDate,
+            weightKg: parseFloat(row.peso_kg),
+            lengthCm,
+            widthCm,
+            heightCm,
+            isFragile: row.es_fragil.toLowerCase() === 'true',
+            requiresRefurbishment: row.requiere_refrigeracion.toLowerCase() === 'true',
+            status: row.estado,
+          });
+
+          const supplier = await this.supplierService.findByNameOrCreate(row.id_proveedor);
+          await this.provisionService.create(product.id, supplier.id);
+          await this.inventoryService.create(store.id, product.id);
+
+          await qr.commitTransaction();
+          created++;
+        } catch (err) {
+          console.error('Error importProducts fila:', row, err);
+          await qr.rollbackTransaction();
+          skipped++;
+        } finally {
+          await qr.release();
+        }
       }
+    };
+
+    // Dividir las filas en batches
+    const batches: ProductCsvRow[][] = [];
+    for (let i = 0; i < rows.length; i += batchSize) {
+      batches.push(rows.slice(i, i + batchSize));
     }
+
+    // Ejecutar batches en paralelo con límite de concurrencia
+    await Promise.all(
+      batches.map(batch => limit(() => processBatch(batch)))
+    );
 
     return { created, skipped };
   }
