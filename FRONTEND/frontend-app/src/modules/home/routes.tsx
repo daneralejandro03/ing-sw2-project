@@ -12,6 +12,14 @@ const homeRoutes = [
       </Suspense>
     ),
   },
+  {
+    path: '/home',
+    element: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <Home />
+      </Suspense>
+    ),
+  },
 ];
 
 export default homeRoutes;

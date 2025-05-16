@@ -4,6 +4,7 @@ const Login = lazy(() => import("./views/Login"));
 const Register = lazy(() => import("./views/Register"));
 const ForgotPassword = lazy(() => import("./views/ForgotPassword"));
 const ResetPassword = lazy(() => import("./views/ResetPassword"));
+const VerifyAccount = lazy(() => import("./views/VerifyAccount"));
 
 const authRoutes = [
   {
@@ -35,6 +36,14 @@ const authRoutes = [
     element: (
       <Suspense fallback={<div>Loading...</div>}>
         <ResetPassword />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/verify",
+    element: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <VerifyAccount />
       </Suspense>
     ),
   },
