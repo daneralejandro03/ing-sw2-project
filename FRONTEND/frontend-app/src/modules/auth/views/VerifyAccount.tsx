@@ -1,17 +1,16 @@
 import React, { useState } from "react";
 import authService from "../services/authService";
-import type { ResetPasswordPayload } from "../types/Auth";
+import type { VerifyAccount } from "../types/Auth";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 
-const ResetPassword: React.FC = () => {
-  const [newPassword, setNewPassword] = useState("");
+const VerifyAccount: React.FC = () => {
+  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string>();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjYzZDI3MDJlMDk2ZGFlZWFkNzE1NyIsImlhdCI6MTc0NzMzNzQ5MSwiZXhwIjoxNzQ3MzQxMDkxfQ.XWDqI73PH-0yj5-AtzuGRE-CwRbK_cUKOcXiCTE7ul0";
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,24 +18,21 @@ const ResetPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      const payload: ResetPasswordPayload = { token, newPassword };
-      const response = authService.resetPasswod(payload);
+      const payload: VerifyAccount = { email, code };
+      const response = await authService.verifyAccount(payload);
       console.log("Response: ", JSON.stringify(response));
 
       Swal.fire({
-        title: "Contraseña cambiada exitosamente",
+        title: "Verificación completa!",
         icon: "success",
         draggable: true,
       });
 
       navigate("/login");
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Error al restablecer la contraseña"
-      );
-
+      setError(err.response?.data?.message || "Error al verificar cuenta");
       Swal.fire({
-        title: "Ha ocurrido un error",
+        title: "Ha ocurrido un error!",
         icon: "error",
         draggable: true,
       });
@@ -46,13 +42,13 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center bg-gray-100 px-4 pt-10">
+    <div className="w-screen h-screen flex items-center justify-center bg-gray-100 p-4">
       <form
-        onSubmit={handleSubmit}
         className="w-full max-w-md bg-white shadow-md rounded-lg p-8 space-y-6"
+        onSubmit={handleSubmit}
       >
         <h2 className="text-2xl font-bold text-center text-gray-800">
-          Recuperar contraseña
+          Verificar cuenta
         </h2>
 
         {error && (
@@ -62,10 +58,19 @@ const ResetPassword: React.FC = () => {
         )}
 
         <input
-          type="password"
-          placeholder="Nueva contraseña"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          type="email"
+          placeholder="Correo"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <input
+          type="text"
+          placeholder="Código"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
           required
           className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -80,11 +85,11 @@ const ResetPassword: React.FC = () => {
                 : "bg-blue-600 hover:bg-blue-700"
             }
           `}>
-          {loading ? "Enviando..." : "Aceptar"}
+          {loading ? "Confirmando..." : "Confirmar"}
         </button>
       </form>
     </div>
   );
 };
 
-export default ResetPassword;
+export default VerifyAccount;

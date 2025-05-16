@@ -11,6 +11,26 @@ const userService = {
     const { data } = await api.post(endpoints.changePassword, payload);
     return data;
   },
+
+  async listUsers(){
+    const token = localStorage.getItem("token");
+    const { data } = await api.get(endpoints.list, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return data;
+  },
+
+  async delete(id: string){
+    const token = localStorage.getItem("token");
+    const { data } = await api.delete(endpoints.delete(id),  {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return data;
+  },
 };
 
 export default userService;

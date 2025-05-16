@@ -29,3 +29,8 @@ export interface ResetPasswordPayload{
   token: string
   newPassword: string;
 }
+
+export interface VerifyAccount{
+  email: string;
+  code: string;
+}
