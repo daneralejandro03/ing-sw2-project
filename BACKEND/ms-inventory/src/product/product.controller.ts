@@ -1,9 +1,13 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe,
+  Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req, BadRequestException,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Product } from './entities/product.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Request } from 'express';
+
 
 @Controller('product')
 export class ProductController {
@@ -27,12 +31,20 @@ export class ProductController {
     return this.productService.findOne(id);
   }
 
+
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateProductDto: UpdateProductDto,
-  ) {
-    return this.productService.update(id, updateProductDto);
+    @Body() dto: UpdateProductDto,
+    @Req() req: Request,
+  ): Promise<Product> {
+    const token = req.headers.authorization;;
+
+    if (!token || !token.startsWith('Bearer ')) {
+      throw new BadRequestException('Token no provisto');
+    }
+    return this.productService.update(id, dto, token);
   }
 
   @Delete(':id')
