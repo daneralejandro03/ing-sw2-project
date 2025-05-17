@@ -1,0 +1,54 @@
+version: '3.8'
+
+networks:
+  default:
+    driver: bridge
+  microservices-network:
+    external: true
+
+services:
+  app:
+    build: .
+    container_name: ms-inventory
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=${DB_PORT}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=${PORT}
+      - NOTIFICATION_API_URL=${NOTIFICATION_API_URL}
+      - SECURITY_SERVICE_URL=${SECURITY_SERVICE_URL}
+    ports:
+      - '${PORT}:${PORT}'
+    depends_on:
+      - mysql
+    networks:
+      - default
+      - microservices-network
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:${PORT}/api/v1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: on-failure:3
+
+  mysql:
+    image: mysql:8.0
+    container_name: ms-inventory-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+    ports:
+      - '${DB_PORT}:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - default
+
+volumes:
+  mysql-data:
