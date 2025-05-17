@@ -6,5 +6,7 @@ export default {
   register: `${AUTH_BASE}/register`,
   forgotPassword: `${AUTH_BASE}/forgot-password`,
   resetPassword: `${AUTH_BASE}/reset-password`,
-  verifyAccount: `${AUTH_BASE}/Verify`
+  verifyAccount: `${AUTH_BASE}/Verify`,
+  toggle2fa: `${AUTH_BASE}/2fa/toggle`,
+  verify2FA: `${AUTH_BASE}/2fa`
 };

@@ -4,10 +4,13 @@ import type { LoginPayload } from "../types/Auth";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../../redux/authSlice";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [toggle2fa, setToggle2fa] = useState(false);
   const [error, setError] = useState<string>();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -18,11 +21,19 @@ const Login: React.FC = () => {
     setError(undefined);
     setLoading(true);
 
+    if(toggle2fa){
+
+    }
+
     try {
       const payload: LoginPayload = { email, password };
       const response = await authService.login(payload);
 
       localStorage.setItem("token", response.access_token);
+
+      const token = localStorage.getItem("token");
+
+      //const decoded = jwtDecode(token) as { role: string };
 
       navigate("/dashboard");
       dispatch(loginSuccess({ token: response.access_token }));
@@ -83,6 +94,19 @@ const Login: React.FC = () => {
           />
         </div>
 
+        <div className="flex items-center space-x-2">
+          <input
+            id="toggle2fa"
+            type="checkbox"
+            checked={toggle2fa}
+            onChange={(e) => setToggle2fa(e.target.checked)}
+            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="toggle2fa" className="text-sm text-gray-700">
+            Activar segundo factor de autenticación
+          </label>
+        </div>
+
         <div className="text-right">
           <a
             href="/forgot-password"
@@ -102,7 +126,8 @@ const Login: React.FC = () => {
                   ? "bg-blue-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               }
-              `}>
+              `}
+          >
             {loading ? "Cargando..." : "Iniciar sesión"}
           </button>
         </div>
