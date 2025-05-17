@@ -70,7 +70,6 @@ export class AuthService {
       session.endSession();
     }
 
-    // 5) Envío código de verificación por email
     await this.emailService.sendMail({
       address: dto.email,
       subject: 'Código de verificación',

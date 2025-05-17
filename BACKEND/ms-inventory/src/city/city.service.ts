@@ -16,10 +16,9 @@ export class CityService {
     private readonly departamentRepo: Repository<Departament>,
   ) { }
 
-  async create(dto: CreateCityDto): Promise<City> {
-
-    const dept = await this.departamentRepo.findOne({ where: { id: dto.departamentId } });
-    if (!dept) throw new NotFoundException(`Departament #${dto.departamentId} not found`);
+  async create(departamentId: number, dto: CreateCityDto): Promise<City> {
+    const dept = await this.departamentRepo.findOne({ where: { id: departamentId } });
+    if (!dept) throw new NotFoundException(`Departament #${departamentId} not found`);
 
     const city = this.cityRepo.create({
       name: dto.name,
@@ -42,15 +41,13 @@ export class CityService {
   }
 
   async update(id: number, dto: UpdateCityDto): Promise<City> {
-    const city = await this.findOne(id);
+    const city = await this.cityRepo.findOne({ where: { id } });
+    if (!city) {
+      throw new NotFoundException(`City #${id} not found`);
+    }
 
     if (dto.name !== undefined) {
       city.name = dto.name;
-    }
-    if (dto.departamentId !== undefined) {
-      const dept = await this.departamentRepo.findOne({ where: { id: dto.departamentId } });
-      if (!dept) throw new NotFoundException(`Departament #${dto.departamentId} not found`);
-      city.departament = dept;
     }
 
     return this.cityRepo.save(city);
@@ -67,5 +64,25 @@ export class CityService {
     return this.cityRepo.find({
       where: { departament: { id: departamentId } }
     });
+  }
+
+  async findOneCityName(name: string): Promise<City> {
+    const city = await this.cityRepo.findOne({
+      where: { name },
+      relations: ['departament'],
+    });
+    if (!city) throw new NotFoundException(`City #${name} not found`);
+    return city;
+  }
+
+  async findByNameOrCreate(departamentId: number, name: string): Promise<City> {
+    const city = await this.cityRepo.findOne({ where: { name } });
+    if (city) return city;
+
+    const dept = await this.departamentRepo.findOne({ where: { id: departamentId } });
+    if (!dept) throw new NotFoundException(`Departament #${departamentId} not found`);
+
+    const newCity = this.cityRepo.create({ name, departament: dept });
+    return this.cityRepo.save(newCity);
   }
 }

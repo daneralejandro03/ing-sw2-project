@@ -15,14 +15,30 @@ class EmailController {
 
       const result = await emailService.sendEmail(emailModel.toServiceFormat());
 
-      return res.status(200).json({
-        status: "success",
-        message: "Correo enviado correctamente",
-        data: {
-          messageId: result.messageId,
-          status: result.status,
-        },
-      });
+      if (result.success) {
+        return res.status(200).json({
+          status: "success",
+          message: "Correo enviado correctamente",
+          data: {
+            messageId: result.messageId,
+            status: result.status,
+          },
+        });
+      } else if (result.status === "suppressed") {
+        return res.status(200).json({
+          status: "warning",
+          message: result.reason,
+          data: {
+            address: emailModel.address,
+            status: result.status,
+          },
+        });
+      } else {
+        return res.status(500).json({
+          status: "error",
+          message: "Error interno del servidor",
+        });
+      }
     } catch (error) {
       next(error);
     }
