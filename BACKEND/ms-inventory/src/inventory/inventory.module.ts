@@ -6,6 +6,8 @@ import { Inventory } from './entities/inventory.entity';
 import { ProductModule } from 'src/product/product.module';
 import { StoreModule } from 'src/store/store.module';
 import { MotionModule } from 'src/motion/motion.module';
+import { AuthModule } from 'src/auth/auth.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -15,7 +17,9 @@ import { MotionModule } from 'src/motion/motion.module';
     ]),
     ProductModule,
     StoreModule,
-    MotionModule
+    MotionModule,
+    AuthModule,
+    HttpModule,
   ],
   controllers: [InventoryController],
   providers: [InventoryService],
