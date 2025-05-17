@@ -1,34 +1,58 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { MotionService } from './motion.service';
-import { CreateMotionDto } from './dto/create-motion.dto';
 import { UpdateMotionDto } from './dto/update-motion.dto';
+import { Motion } from './entities/motion.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody
+} from '@nestjs/swagger';
 
+@ApiTags('Motion')
+@ApiBearerAuth()
 @Controller('motion')
 export class MotionController {
-  constructor(private readonly motionService: MotionService) {}
+  constructor(private readonly motionService: MotionService) { }
 
-  @Post()
-  create(@Body() createMotionDto: CreateMotionDto) {
-    return this.motionService.create(createMotionDto);
-  }
 
   @Get()
+  @ApiOperation({ summary: 'Obtener todos los movimientos' })
+  @ApiResponse({ status: 200, description: 'Listado de movimientos', type: [Motion] })
   findAll() {
     return this.motionService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.motionService.findOne(+id);
+  @ApiOperation({ summary: 'Obtener movimiento por ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID del movimiento' })
+  @ApiResponse({ status: 200, description: 'Movimiento encontrado', type: Motion })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.motionService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMotionDto: UpdateMotionDto) {
-    return this.motionService.update(+id, updateMotionDto);
+  @ApiOperation({ summary: 'Actualizar un movimiento existente' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID del movimiento' })
+  @ApiBody({ type: UpdateMotionDto })
+  @ApiResponse({ status: 200, description: 'Movimiento actualizado', type: Motion })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateMotionDto: UpdateMotionDto
+  ) {
+    return this.motionService.update(id, updateMotionDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.motionService.remove(+id);
+  @ApiOperation({ summary: 'Eliminar un movimiento' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID del movimiento' })
+  @ApiResponse({ status: 200, description: 'Movimiento eliminado' })
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.motionService.remove(id);
   }
 }
