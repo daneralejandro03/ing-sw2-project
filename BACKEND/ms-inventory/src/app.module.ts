@@ -37,6 +37,14 @@ import { EmailModule } from './email/email.module';
         database: config.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        connectTimeout: 60000,
+        extra: {
+          connectionLimit: 10,
+          acquireTimeout: 60000,
+          idleTimeout: 30000,
+          enableKeepAlive: true,
+          keepAliveInitialDelay: 0,
+        },
       }),
     }),
 
