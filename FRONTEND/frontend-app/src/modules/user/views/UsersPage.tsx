@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import userService from "../services/userService";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserCog } from "lucide-react";
 import Swal from "sweetalert2";
-//import CreatePermissionModal from "../components/CreatePermissionModal";
-//import type { CreatePermission } from "../types/Permission";
+import CreateUserModal from "../components/CreateUserModal";
+import type { CreateUser } from "../types/User";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState([]);
@@ -17,6 +17,10 @@ const UsersPage: React.FC = () => {
 
   const deleteUser = async (id: string) => {
     try {
+      Swal.fire({
+        title: "¿Esta seguro que desea eliminar este usuario?",
+        showDenyButton: true,
+      });
       await userService.delete(id);
       Swal.fire({
         title: "Usuario eliminado",
@@ -37,11 +41,11 @@ const UsersPage: React.FC = () => {
     loadUsers();
   }, []);
 
-  /*const handleCreate = async (payload: CreatePermission) => {
-    await permissionService.create(payload);
-    await loadPermissions();
+  const handleCreate = async (payload: CreateUser, role: string) => {
+    await userService.create(payload, role);
+    await loadUsers();
     setModalOpen(false);
-  };*/
+  };
 
   return (
     <div className="p-6">
@@ -54,6 +58,12 @@ const UsersPage: React.FC = () => {
           Crear Usuario
         </button>
       </div>
+
+      {error && (
+        <p className="bg-red-100 text-red-600 text-center p-2 rounded">
+          {error}
+        </p>
+      )}
 
       <table className="min-w-full border border-gray-300 rounded-md">
         <thead className="bg-gray-100">
@@ -110,11 +120,18 @@ const UsersPage: React.FC = () => {
                 <button onClick={() => deleteUser(user._id)}>
                   <Trash2 className="text-red-600 hover:scale-110 transition" />
                 </button>
+
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <CreateUserModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreate={handleCreate}
+      />
     </div>
   );
 };

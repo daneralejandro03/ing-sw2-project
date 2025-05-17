@@ -20,7 +20,6 @@ export interface RegisterPayload {
   IDNumber: string;
 }
 
-
 export interface ForgotPasswordPayload{
   email: string;
 }
@@ -33,4 +32,9 @@ export interface ResetPasswordPayload{
 export interface VerifyAccount{
   email: string;
   code: string;
+}
+
+export interface Toggle2FA{
+  email: string;
+  enable: boolean;
 }
