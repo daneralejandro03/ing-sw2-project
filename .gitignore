@@ -82,3 +82,4 @@ web_modules/
 
 # Repositorios anidados (asegúrate de no tener .git dentro de ms-security si no es submódulo)
 **/.git
+node_modules
