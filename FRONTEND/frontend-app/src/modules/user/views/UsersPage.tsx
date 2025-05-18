@@ -3,32 +3,45 @@ import userService from "../services/userService";
 import { Trash2, UserCog } from "lucide-react";
 import Swal from "sweetalert2";
 import CreateUserModal from "../components/CreateUserModal";
+import UpdateUserModal from "../components/UpdateUserModal";
 import type { CreateUser } from "../types/User";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [editUser, setEditUser] = useState(null);
 
   const loadUsers = async () => {
     const data = await userService.listUsers();
+    console.log(JSON.stringify(data));
+
     setUsers(data);
   };
 
   const deleteUser = async (id: string) => {
     try {
       Swal.fire({
-        title: "¿Esta seguro que desea eliminar este usuario?",
-        showDenyButton: true,
-      });
-      await userService.delete(id);
-      Swal.fire({
-        title: "Usuario eliminado",
-        icon: "success",
-        timer: 2000,
+        title: "Eliminar usuario",
+        text: "¿Estas seguro que desea eliminar el usuario?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Eliminar",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await userService.delete(id);
+          Swal.fire({
+            title: "Usuario eliminado",
+            icon: "success",
+            timer: 2000,
+          });
+          loadUsers();
+        }
       });
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al iniciar sesión");
+      setError(err.response?.data?.message || "Error al eliminar usuario");
       Swal.fire({
         title: "Ha ocurrido un error",
         icon: "error",
@@ -117,10 +130,14 @@ const UsersPage: React.FC = () => {
                 {user.role}
               </td>
               <td className="px-4 py-2 border-b border-gray-200">
-                <button onClick={() => deleteUser(user._id)}>
-                  <Trash2 className="text-red-600 hover:scale-110 transition" />
-                </button>
-
+                <div className="flex gap-2">
+                  <button onClick={() => deleteUser(user._id)}>
+                    <Trash2 className="text-red-600 hover:scale-110 transition" />
+                  </button>
+                  <button onClick={() => setEditUser(user)}>
+                    <UserCog className="text-blue-600 hover:scale-110 transition" />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -131,6 +148,16 @@ const UsersPage: React.FC = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
+      />
+
+      <UpdateUserModal
+        isOpen={!!editUser}
+        user={editUser}
+        onClose={() => setEditUser(null)}
+        onUpdate={async (id, payload) => {
+          await userService.update(payload, id);
+          await loadUsers();
+        }}
       />
     </div>
   );

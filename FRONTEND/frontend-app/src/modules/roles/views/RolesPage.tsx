@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import rolesService from "../services/rolesService";
 import CreateRoleModal from "../components/CreateRoleModal";
-
-type Role = {
-  _id: string;
-  name: string;
-};
+import { Trash2, UserCog } from "lucide-react";
+import Swal from "sweetalert2";
+import type { Role } from "../types/Rol";
+import UpdateRoleModal from "../components/UpdateRoleModal";
 
 const RolesPage: React.FC = () => {
+  const [error, setError] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editRole, setEditRole] = useState(null);
 
   const loadRoles = async () => {
     const data = await rolesService.list();
@@ -26,6 +27,37 @@ const RolesPage: React.FC = () => {
     setModalOpen(false);
   };
 
+  const deleteRole = async (id: string) => {
+    try {
+      Swal.fire({
+        title: "Eliminar rol",
+        text: "¿Estas seguro que desea eliminar el rol?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Eliminar",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          await rolesService.delete(id);
+          Swal.fire({
+            title: "Rol eliminado",
+            icon: "success",
+            timer: 2000,
+          });
+          loadRoles();
+        }
+      });
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al eliminar usuario");
+      Swal.fire({
+        title: "Ha ocurrido un error",
+        icon: "error",
+        timer: 2000,
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
@@ -38,11 +70,20 @@ const RolesPage: React.FC = () => {
         </button>
       </div>
 
+      {error && (
+        <p className="bg-red-100 text-red-600 text-center p-2 rounded">
+          {error}
+        </p>
+      )}
+
       <table className="min-w-full border border-gray-300 rounded-md">
         <thead className="bg-gray-100">
           <tr>
             <th className="text-left px-4 py-2 border-b border-gray-300">
               Nombre
+            </th>
+            <th className="text-left px-4 py-2 border-b border-gray-300">
+              Acciones
             </th>
           </tr>
         </thead>
@@ -51,6 +92,16 @@ const RolesPage: React.FC = () => {
             <tr key={role.id} className="hover:bg-gray-50">
               <td className="px-4 py-2 border-b border-gray-200">
                 {role.name}
+              </td>
+              <td className="px-4 py-2 border-b border-gray-200">
+                <div className="flex gap-2">
+                  <button onClick={() => deleteRole(role._id)}>
+                    <Trash2 className="text-red-600 hover:scale-110 transition" />
+                  </button>
+                  <button onClick={() => setEditRole(role)}>
+                    <UserCog className="text-blue-600 hover:scale-110 transition" />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -61,6 +112,16 @@ const RolesPage: React.FC = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
+      />
+
+      <UpdateRoleModal
+        isOpen={!!editRole}
+        role={editRole}
+        onClose={() => setEditRole(null)}
+        onUpdate={async (id, payload) => {
+          await rolesService.update(payload, id);
+          await loadRoles();
+        }}
       />
     </div>
   );

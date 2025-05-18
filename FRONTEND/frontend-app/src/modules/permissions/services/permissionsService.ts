@@ -1,6 +1,6 @@
 import axios from "axios";
 import endpoints from "./permissionsEndpoints";
-import type { CreatePermission } from "../types/Permission";
+import type { CreatePermission, UpdatePermission } from "../types/Permission";
 
 const api = axios.create({
   baseURL:
@@ -28,6 +28,27 @@ const permissionService = {
     });
     return data;
   },
+
+  async delete(id: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.delete(endpoints.delete(id), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+  async update(payload: UpdatePermission, id: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.patch(endpoints.update(id), payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+  
 };
 
 export default permissionService;

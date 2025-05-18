@@ -33,6 +33,9 @@ const CreateRoleModal: React.FC<CreateRolModalProps> = ({
         icon: "success",
         draggable: true,
       });
+
+      setName("");
+
       onClose();
     } catch (err: any) {
       setError(err.message || "Error al crear el rol");

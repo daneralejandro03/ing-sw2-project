@@ -9,6 +9,7 @@ interface CreateUserModalProps {
   onCreate: (payload: CreateUser, role: string) => Promise<void>;
 }
 
+
 const CreateUserModal: React.FC<CreateUserModalProps> = ({
   isOpen,
   onClose,
@@ -26,12 +27,24 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [error, setError] = useState<string>();
   const [roles, setRoles] = useState([]);
   const [role, setRole] = useState("");
-
   const [loading, setLoading] = useState(false);
+
+  const resetForm = () => {
+    setName("");
+    setLastName("");
+    setGender("");
+    setEmail("");
+    setPassword("");
+    setPhone(0);
+    setLandline(0);
+    setIDType("");
+    setIDNumber("");
+    setRole("");
+    setError(undefined);
+  };
 
   const loadRoles = async () => {
     const response = await rolesService.list();
-    console.log(JSON.stringify(response))
     setRoles(response);
   };
 
@@ -65,6 +78,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         icon: "success",
         draggable: true,
       });
+
+      resetForm();
+      
       onClose();
     } catch (err: any) {
       setError(err.message || "Error al crear el usuario");

@@ -21,6 +21,7 @@ const VerifyAccount: React.FC = () => {
       const payload: VerifyAccount = { email, code };
       const response = await authService.verify2FA(payload);
       console.log("Response: ", JSON.stringify(response));
+      localStorage.setItem("token", response.access_token)
 
       Swal.fire({
         title: "Verificación completa!",
@@ -28,7 +29,8 @@ const VerifyAccount: React.FC = () => {
         draggable: true,
       });
 
-      navigate("/login");
+      navigate("/dashboard");
+
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al verificar cuenta");
       Swal.fire({

@@ -6,4 +6,5 @@ export default {
   list: `${USER_BASE}`,
   delete: (id: string) => `${USER_BASE}/${id}`,
   create: (role: string) => `${USER_BASE}/${role}`,
+  update: (id: string) => `${USER_BASE}/${id}`,
 };

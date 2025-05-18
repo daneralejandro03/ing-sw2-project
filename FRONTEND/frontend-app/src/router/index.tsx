@@ -5,12 +5,14 @@ import authRoutes from '../modules/auth/routes';
 import homeRoutes from '../modules/home/routes';
 import userRoutes from '../modules/user/routes';
 import dasboardRoutes from '../modules/dashboard/routes';
+import accessRoutes from '../modules/access/routes';
 
 const allRoutes = [
   ...authRoutes,
   ...homeRoutes,
   ...userRoutes,
-  ...dasboardRoutes
+  ...dasboardRoutes,
+  ...accessRoutes,
 ];
 
 export function AppRoutes() {

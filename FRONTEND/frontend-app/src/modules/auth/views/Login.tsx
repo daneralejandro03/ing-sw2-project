@@ -21,21 +21,17 @@ const Login: React.FC = () => {
     setError(undefined);
     setLoading(true);
 
-    if(toggle2fa){
-
-    }
-
     try {
-      const payload: LoginPayload = { email, password };
+      const twoFactorMethod = "email"
+      const payload: LoginPayload = { email, password, twoFactorMethod };
       const response = await authService.login(payload);
 
-      localStorage.setItem("token", response.access_token);
-
-      const token = localStorage.getItem("token");
+      //localStorage.setItem("token", response.access_token);
 
       //const decoded = jwtDecode(token) as { role: string };
 
-      navigate("/dashboard");
+      navigate("/verify2FA");
+      
       dispatch(loginSuccess({ token: response.access_token }));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al iniciar sesión");
