@@ -27,7 +27,7 @@ declare module 'express' {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
   canActivate(context: ExecutionContext): boolean | Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
@@ -43,7 +43,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       payload = this.jwtService.verify<JwtPayload>(token);
     } catch (err) {
-      throw new UnauthorizedException('Token inválido o expirado');
+      throw new UnauthorizedException('Token inválido o expirado', err);
     }
 
     req.user = {

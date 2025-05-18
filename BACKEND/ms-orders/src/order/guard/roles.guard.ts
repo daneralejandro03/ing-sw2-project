@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../common/roles.decorator';
+import { User } from '../common/interfaces/user.interface';
+
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -16,11 +18,7 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
-
-    const { user } = context.switchToHttp().getRequest();
+    const { user }: { user: User } = context.switchToHttp().getRequest();
 
     if (!user) {
       throw new ForbiddenException('Usuario no autenticado');
