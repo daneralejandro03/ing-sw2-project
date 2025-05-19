@@ -39,6 +39,12 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
         icon: "success",
         draggable: true,
       });
+
+      setUrl("");
+      setMethod("");
+      setModule("");
+      setDescription("");
+
       onClose();
     } catch (err: any) {
       setError(err.message || "Error al crear el permiso");
@@ -88,7 +94,6 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
           className="w-full px-3 py-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
-
         <input
           type="text"
           value={description}
@@ -96,7 +101,7 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
           placeholder="Descripción"
           className="w-full px-3 py-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        
+
         <div className="flex justify-end space-x-2">
           <button
             type="button"

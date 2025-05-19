@@ -5,6 +5,8 @@ const Dashboard = lazy(() => import("./views/Dashboard"));
 const RolesPage = lazy(() => import("../roles/views/RolesPage"));
 const PermissionsPage = lazy(() => import("../permissions/views/PermissionsPage"));
 const UsersPage = lazy(() => import("../user/views/UsersPage"));
+const AccessPage = lazy(() => import("../access/views/AccessPage"));
+const Profile = lazy(() => import("../user/components/Profile"));
 
 const dashboardRoutes = [
   {
@@ -26,7 +28,7 @@ const dashboardRoutes = [
       {
         path: "permisos",
         element: (
-          <Suspense fallback={<div>Loading roles...</div>}>
+          <Suspense fallback={<div>Loading permissions...</div>}>
             <PermissionsPage />
           </Suspense>
         ),
@@ -34,8 +36,24 @@ const dashboardRoutes = [
       {
         path: "users",
         element: (
-          <Suspense fallback={<div>Loading roles...</div>}>
+          <Suspense fallback={<div>Loading users...</div>}>
             <UsersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "access",
+        element: (
+          <Suspense fallback={<div>Loading access...</div>}>
+            <AccessPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <Suspense fallback={<div>Loading profile...</div>}>
+            <Profile />
           </Suspense>
         ),
       },

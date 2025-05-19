@@ -3,12 +3,29 @@ import authService from "../services/authService";
 import type { VerifyAccount } from "../types/Auth";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import rolesService from "../../roles/services/rolesService";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../../../redux/authSlice";
 
 const VerifyAccount: React.FC = () => {
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+
+  type MyJwtPayload = {
+    id: string;
+    email: string;
+    role: string;
+    iat: number;
+    exp: number;
+  };
+
+  const chargeLocalStorage = () => {
+
+  }
 
   const navigate = useNavigate();
 
@@ -21,6 +38,28 @@ const VerifyAccount: React.FC = () => {
       const payload: VerifyAccount = { email, code };
       const response = await authService.verify2FA(payload);
       console.log("Response: ", JSON.stringify(response));
+      localStorage.setItem("token", response.access_token);
+
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        const decoded = jwtDecode<MyJwtPayload>(token);
+        const email = decoded.email;
+        localStorage.setItem("email", decoded.email);
+
+        console.log("Email:", email);
+      } else {
+        console.warn("Token no encontrado.");
+      }
+
+      localStorage.setItem("token", response.access_token);
+      if(!token){return};
+      const decoded = jwtDecode(token) as { role: string };
+      const rol =  await rolesService.getById(decoded.role);
+      localStorage.setItem("role", rol.name);
+
+      dispatch(loginSuccess({ token, rol: rol.name }));
+
 
       Swal.fire({
         title: "Verificación completa!",
@@ -28,7 +67,7 @@ const VerifyAccount: React.FC = () => {
         draggable: true,
       });
 
-      navigate("/login");
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al verificar cuenta");
       Swal.fire({
@@ -48,7 +87,7 @@ const VerifyAccount: React.FC = () => {
         onSubmit={handleSubmit}
       >
         <h2 className="text-2xl font-bold text-center text-gray-800">
-          Verificar cuenta
+          Verificación en dos pasos
         </h2>
 
         {error && (
@@ -84,7 +123,8 @@ const VerifyAccount: React.FC = () => {
                 ? "bg-blue-400 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700"
             }
-          `}>
+          `}
+        >
           {loading ? "Confirmando..." : "Confirmar"}
         </button>
       </form>

@@ -1,6 +1,6 @@
 import axios from "axios";
 import endpoints from "./rolesEndpoints";
-import type { CreateRol } from "../types/Rol";
+import type { CreateRol, UpdateRol } from "../types/Rol";
 
 const api = axios.create({
   baseURL:
@@ -9,7 +9,6 @@ const api = axios.create({
 });
 
 const rolesService = {
-  
   async create(payload: CreateRol) {
     const token = localStorage.getItem("token");
     const { data } = await api.post(endpoints.create, payload, {
@@ -29,6 +28,36 @@ const rolesService = {
     });
     return data;
   },
+
+  async delete(id: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.delete(endpoints.delete(id), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+  async update(payload: UpdateRol, role: string) {
+      const token = localStorage.getItem("token");
+      const { data } = await api.patch(endpoints.update(role), payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return data;
+    },
+
+    async getById(id: string){
+      const token = localStorage.getItem("token");
+      const { data } = await api.get(endpoints.get(id), {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return data;
+    }
 };
 
 export default rolesService;

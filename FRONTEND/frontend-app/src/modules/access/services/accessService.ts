@@ -1,6 +1,6 @@
 import axios from "axios";
-import endpoints from "./permissionsEndpoints";
-import type { CreatePermission, UpdatePermission } from "../types/Permission";
+import endpoints from "./accessEndpoints";
+import type { UpdateAccess } from "../types/Access";
 
 const api = axios.create({
   baseURL:
@@ -8,16 +8,7 @@ const api = axios.create({
     "http://localhost:3001/api/v1",
 });
 
-const permissionService = {
-  async create(payload: CreatePermission) {
-    const token = localStorage.getItem("token");
-    const { data } = await api.post(endpoints.create, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return data;
-  },
+const accessService = {
 
   async list() {
     const token = localStorage.getItem("token");
@@ -29,9 +20,9 @@ const permissionService = {
     return data;
   },
 
-  async delete(id: string) {
+  async create(permissionId: string, roleId: string) {
     const token = localStorage.getItem("token");
-    const { data } = await api.delete(endpoints.delete(id), {
+    const { data } = await api.post(endpoints.create(permissionId, roleId), {}, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -39,16 +30,26 @@ const permissionService = {
     return data;
   },
 
-  async update(payload: UpdatePermission, id: string) {
+  async update(accessId: string, payload: UpdateAccess) {
     const token = localStorage.getItem("token");
-    const { data } = await api.patch(endpoints.update(id), payload, {
+    const { data } = await api.patch(endpoints.update(accessId), payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     return data;
   },
-  
+
+  async delete(accessId: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.delete(endpoints.delete(accessId), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
 };
 
-export default permissionService;
+export default accessService;

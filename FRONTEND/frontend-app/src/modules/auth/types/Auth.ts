@@ -6,6 +6,7 @@ export interface AuthResponse {
 export interface LoginPayload {
   email: string;
   password: string;
+  twoFactorMethod?: string;
 }
 
 export interface RegisterPayload {

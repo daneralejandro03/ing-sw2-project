@@ -1,6 +1,8 @@
 import axios from "axios";
 import endpoints from "./userEndpoints";
-import type { ChangePassword, CreateUser } from "../types/User";
+import type { ChangePassword, CreateUser, UpdateUser } from "../types/User";
+
+const token = localStorage.getItem("token");
 
 const api = axios.create({
   baseURL:
@@ -10,7 +12,11 @@ const api = axios.create({
 
 const userService = {
   async changePassword(payload: ChangePassword) {
-    const { data } = await api.post(endpoints.changePassword, payload);
+    const { data } = await api.post(endpoints.changePassword, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return data;
   },
 
@@ -43,6 +49,18 @@ const userService = {
     });
     return data;
   },
+
+  async update(payload: UpdateUser, role: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.patch(endpoints.update(role), payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+
 };
 
 export default userService;

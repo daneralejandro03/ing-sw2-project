@@ -20,7 +20,7 @@ const Home: React.FC = () => {
           <ul className="space-y-4 text-lg font-medium text-gray-700">
             <li className="hover:text-blue-600 cursor-pointer">Nosotros</li>
             <li className="hover:text-blue-600 cursor-pointer">Contacto</li>
-            <li className="hover:text-blue-600 cursor-pointer">Tu madre</li>
+            <li className="hover:text-blue-600 cursor-pointer">FAQ</li>
           </ul>
         </nav>
 
