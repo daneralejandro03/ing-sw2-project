@@ -321,4 +321,12 @@ export class AuthService {
       user: updated,
     };
   }
+
+  async getTwoFactorStatus(email: string): Promise<{ requiresTwoFactor: boolean }> {
+    const user = await this.userModel.findOne({ email }).select('requiresTwoFactor');
+    if (!user) {
+      throw new NotFoundException(`Email "${email}" no registrado`);
+    }
+    return { requiresTwoFactor: user.requiresTwoFactor };
+  }
 }

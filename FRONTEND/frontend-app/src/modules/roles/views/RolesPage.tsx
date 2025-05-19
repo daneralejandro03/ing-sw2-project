@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import rolesService from "../services/rolesService";
 import CreateRoleModal from "../components/CreateRoleModal";
-import { Trash2, UserCog } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import Swal from "sweetalert2";
 import type { Role } from "../types/Rol";
 import UpdateRoleModal from "../components/UpdateRoleModal";
@@ -76,32 +76,30 @@ const RolesPage: React.FC = () => {
         </p>
       )}
 
-      <table className="min-w-full border border-gray-300 rounded-md">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="text-left px-4 py-2 border-b border-gray-300">
-              Nombre
-            </th>
-            <th className="text-left px-4 py-2 border-b border-gray-300">
-              Acciones
-            </th>
+      <table className="min-w-full bg-white shadow-md rounded mb-4">
+        <thead>
+          <tr className="bg-gray-100 text-left text-sm font-semibold text-gray-700">
+            <th className="py-2 px-4">Nombre</th>
+            <th className="py-2 px-4">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {roles.map((role: any) => (
-            <tr key={role.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border-b border-gray-200">
-                {role.name}
-              </td>
-              <td className="px-4 py-2 border-b border-gray-200">
-                <div className="flex gap-2">
-                  <button onClick={() => deleteRole(role._id)}>
-                    <Trash2 className="text-red-600 hover:scale-110 transition" />
-                  </button>
-                  <button onClick={() => setEditRole(role)}>
-                    <UserCog className="text-blue-600 hover:scale-110 transition" />
-                  </button>
-                </div>
+            <tr key={role.id} className="border-t">
+              <td className="py-2 px-4">{role.name}</td>
+              <td className="py-2 px-4 flex gap-2">
+                <button
+                  onClick={() => setEditRole(role)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => deleteRole(role._id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </td>
             </tr>
           ))}

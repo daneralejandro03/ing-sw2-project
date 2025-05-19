@@ -48,6 +48,16 @@ const rolesService = {
       });
       return data;
     },
+
+    async getById(id: string){
+      const token = localStorage.getItem("token");
+      const { data } = await api.get(endpoints.get(id), {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return data;
+    }
 };
 
 export default rolesService;

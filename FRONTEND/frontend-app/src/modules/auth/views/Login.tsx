@@ -1,16 +1,15 @@
 import React, { useState } from "react";
 import authService from "../services/authService";
-import type { LoginPayload } from "../types/Auth";
+import type { LoginPayload, Toggle2FA } from "../types/Auth";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../../redux/authSlice";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-
+import rolesService from "../../roles/services/rolesService";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [toggle2fa, setToggle2fa] = useState(false);
   const [error, setError] = useState<string>();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -22,17 +21,29 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const twoFactorMethod = "email"
+      const twoFactorMethod = "email";
       const payload: LoginPayload = { email, password, twoFactorMethod };
       const response = await authService.login(payload);
 
-      //localStorage.setItem("token", response.access_token);
+      const confirmTwoFactor = await authService.confirmTwoFactor(email);
+      const requiresTwoFactor = confirmTwoFactor.requiresTwoFactor;
 
-      //const decoded = jwtDecode(token) as { role: string };
+      if (requiresTwoFactor) {
+        navigate("/verify2FA");
+      } else {
+        navigate("/dashboard");
+      }
 
-      navigate("/verify2FA");
-      
-      dispatch(loginSuccess({ token: response.access_token }));
+      localStorage.setItem("token", response.access_token);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return;
+      }
+      const decoded = jwtDecode(token) as { role: string };
+      const rol = await rolesService.getById(decoded.role);
+      localStorage.setItem("role", rol.name);
+
+      dispatch(loginSuccess({ token, rol: rol.name }));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al iniciar sesión");
     } finally {
@@ -90,19 +101,6 @@ const Login: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center space-x-2">
-          <input
-            id="toggle2fa"
-            type="checkbox"
-            checked={toggle2fa}
-            onChange={(e) => setToggle2fa(e.target.checked)}
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="toggle2fa" className="text-sm text-gray-700">
-            Activar segundo factor de autenticación
-          </label>
-        </div>
-
         <div className="text-right">
           <a
             href="/forgot-password"
@@ -126,6 +124,12 @@ const Login: React.FC = () => {
           >
             {loading ? "Cargando..." : "Iniciar sesión"}
           </button>
+        </div>
+
+        <div className="text-left">
+          <a href="/" className="text-sm text-blue-600 hover:underline">
+            Regresar
+          </a>
         </div>
       </form>
     </div>

@@ -37,12 +37,22 @@ const authService = {
   },
 
   async toggle2fa(payload: Toggle2FA){
-    const { data } = await api.post(endpoints.toggle2fa, payload);
+    const token = localStorage.getItem("token");
+    const { data } = await api.post(endpoints.toggle2fa, payload, {
+      headers:{
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return data;
   },
 
   async verify2FA(payload: VerifyAccount){
     const { data } = await api.post(endpoints.verify2FA, payload);
+    return data;
+  },
+
+  async confirmTwoFactor(email: string){
+    const { data } = await api.get(endpoints.confirmTwoFactor(email));
     return data;
   },
 };

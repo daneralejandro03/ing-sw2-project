@@ -8,5 +8,6 @@ export default {
   resetPassword: `${AUTH_BASE}/reset-password`,
   verifyAccount: `${AUTH_BASE}/Verify`,
   toggle2fa: `${AUTH_BASE}/2fa/toggle`,
-  verify2FA: `${AUTH_BASE}/2fa`
+  verify2FA: `${AUTH_BASE}/2fa`,
+  confirmTwoFactor: (email: string) => `${AUTH_BASE}/two-factor/${email}`
 };

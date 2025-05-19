@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Patch, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Patch, Req, Get, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -124,5 +124,16 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Token inválido o expirado.' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Get('two-factor/:email')
+  @ApiOperation({ summary: 'Consulta si un email requiere 2FA' })
+  @ApiResponse({ status: 200, description: 'Estado de 2FA.', schema: {
+      example: { requiresTwoFactor: true }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Email no registrado.' })
+  async getTwoFactorStatus(@Param('email') email: string) {
+    return this.authService.getTwoFactorStatus(email);
   }
 }

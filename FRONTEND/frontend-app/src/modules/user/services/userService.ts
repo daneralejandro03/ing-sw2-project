@@ -2,6 +2,8 @@ import axios from "axios";
 import endpoints from "./userEndpoints";
 import type { ChangePassword, CreateUser, UpdateUser } from "../types/User";
 
+const token = localStorage.getItem("token");
+
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_APP_API_AWS_ENDPOINT_PREFIJO ||
@@ -10,7 +12,11 @@ const api = axios.create({
 
 const userService = {
   async changePassword(payload: ChangePassword) {
-    const { data } = await api.post(endpoints.changePassword, payload);
+    const { data } = await api.post(endpoints.changePassword, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return data;
   },
 
