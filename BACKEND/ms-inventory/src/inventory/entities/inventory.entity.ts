@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Store } from '../../store/entities/store.entity';
 import { Product } from '../../product/entities/product.entity';
-import { Motion } from 'src/motion/entities/motion.entity';
+import { Motion } from '../../motion/entities/motion.entity';
 
 @Entity('inventorys')
 @Unique(['store', 'product'])

@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from '../email/email.service';
-import { SmsService } from 'src/sms/sms.service';
+import { SmsService } from '../sms/sms.service';
 import { ToggleTwoFactorDto } from './dto/toggle-two-factor.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
@@ -13,8 +13,8 @@ import { ResendCodeDto } from './dto/resend-code.dto';
 import { TwoFactorDto } from './dto/two-factor.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { User } from 'src/schemas/user.schema';
-import { Role } from 'src/schemas/role.schema';
+import { User } from '../schemas/user.schema';
+import { Role } from '../schemas/role.schema';
 import { RegisterUserDto } from './dto/register-user.dto';
 
 @Injectable()

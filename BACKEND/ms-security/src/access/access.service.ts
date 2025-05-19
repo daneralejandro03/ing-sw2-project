@@ -3,9 +3,9 @@ import { CreateAccessDto } from './dto/create-access.dto';
 import { UpdateAccessDto } from './dto/update-access.dto';
 import { Model, Connection } from 'mongoose';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Access } from 'src/schemas/access.schema';
-import { Role } from 'src/schemas/role.schema';
-import { Permission } from 'src/schemas/permission.schema';
+import { Access } from '../schemas/access.schema';
+import { Role } from '../schemas/role.schema';
+import { Permission } from '../schemas/permission.schema';
 
 @Injectable()
 export class AccessService {

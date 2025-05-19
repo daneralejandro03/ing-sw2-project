@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Motion } from './entities/motion.entity';
 import { CreateMotionDto } from './dto/create-motion.dto';
 import { UpdateMotionDto } from './dto/update-motion.dto';
-import { Inventory } from 'src/inventory/entities/inventory.entity';
+import { Inventory } from '../inventory/entities/inventory.entity';
 
 @Injectable()
 export class MotionService {
