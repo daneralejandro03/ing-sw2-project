@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { APP_GUARD } from '@nestjs/core';  
-import { JwtModule } from '@nestjs/jwt';  
+import { APP_GUARD } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -28,7 +28,7 @@ import { RolesGuard } from './order/guard/roles.guard';
       synchronize: true,
     }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'defaultSecret', 
+      secret: process.env.JWT_SECRET || 'defaultSecret',
       signOptions: { expiresIn: '1h' },
     }),
     OrderModule,
@@ -38,12 +38,12 @@ import { RolesGuard } from './order/guard/roles.guard';
     AppService,
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,  
+      useClass: JwtAuthGuard,
     },
     {
       provide: APP_GUARD,
-      useClass: RolesGuard,    
+      useClass: RolesGuard,
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

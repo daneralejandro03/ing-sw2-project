@@ -93,12 +93,16 @@ export class StoreService {
   }
 
   async findByCode(code: string): Promise<Store | null> {
+    if (!code) {
+      return null;
+    }
     const store = await this.storeRepo.findOne({
-      where: { code },
+      where: { code: code },
       relations: ['city', 'inventory'],
     });
-    return store ? store : null;
+    return store;
   }
+
 
   async update(
     id: number,
@@ -159,6 +163,8 @@ export class StoreService {
     });
     return store ? store : null;
   }
+
+
 
   async findAllUsers(token: string): Promise<UserTokenDto[]> {
     const users = await this.userClient.findAll(token);

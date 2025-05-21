@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
 import { parse } from 'csv-parse/sync';
@@ -28,6 +29,9 @@ import { ProductCsvRow } from './interfaces/product-csv-row.interface';
 
 @Injectable()
 export class CsvService {
+
+  private readonly logger = new Logger(CsvService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly userClient: UserClientService,
@@ -112,6 +116,7 @@ export class CsvService {
   }
 
   async importStores(buffer: Buffer, token: string): Promise<{ created: number; skipped: number }> {
+    this.logger.log('Iniciando importación de TIENDAS desde CSV (modo: sin modificar servicios, unicidad por ID Almacén).');
 
     const text = buffer.toString('utf-8');
     const rows = parse(text, {
@@ -119,74 +124,105 @@ export class CsvService {
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      bom: true, // Para el BOM
+      // Si tus CSV de tiendas también pudieran tener comillas "relajadas", añade:
+      // relax_quotes: true, 
     }) as StoreCsvRow[];
+    this.logger.log(`Parseadas ${rows.length} filas del CSV de tiendas. (Alerta de memoria si es grande)`);
 
-    let created = 0;
-    let skipped = 0;
+    let totalCreated = 0;
+    let totalSkipped = 0;
 
     const limit = pLimit(5);
-    const batchSize = 50;
+    const rowProcessingGroupSize = 50;
 
-    const processBatch = async (batch: StoreCsvRow[]) => {
-      for (const row of batch) {
-        const required = [
+    const processRowGroup = async (
+      rowGroup: StoreCsvRow[],
+      groupNumber: number
+    ): Promise<{ createdInGroup: number; skippedInGroup: number }> => {
+      let createdThisGroup = 0;
+      let skippedThisGroup = 0;
+
+      for (const [indexInGroup, row] of rowGroup.entries()) {
+        // this.logger.debug(`--- TIENDA DEBUG --- Grupo #${groupNumber}, Fila en Grupo ${indexInGroup + 1}`);
+        // this.logger.debug(`Contenido bruto (tienda): ${JSON.stringify(row)}`);
+        // this.logger.debug(`Claves presentes (tienda): ${Object.keys(row).join(', ')}`);
+
+        const requiredFields = [
           'id_almacen', 'nombre_almacen', 'direccion', 'ciudad', 'departamento',
           'pais', 'codigo_postal', 'latitud', 'longitud', 'gerente', 'telefono',
           'email', 'capacidad_m2', 'estado',
         ];
-        if (required.some(f => !row[f])) {
-          skipped++;
+
+        // (Opcional) Bucle de depuración para campos
+        // for (const field of requiredFields) {
+        //   if (!row[field]) {
+        //     this.logger.warn(`(Debug Tienda) Campo requerido '${field}' Falsy. Valor: '${row[field]}', Tipo: ${typeof row[field]}`);
+        //   }
+        // }
+
+        if (requiredFields.some(f => !row[f])) {
+          this.logger.warn(`TIENDA: VALIDACIÓN FALLIDA para Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Almacén del CSV: ${row.id_almacen || 'N/A'}). Faltan campos. Omitiendo.`);
+          skippedThisGroup++;
           continue;
         }
 
         const qr = this.dataSource.createQueryRunner();
         await qr.connect();
         await qr.startTransaction();
-        try {
-          const dep = await this.departService.findByNameOrCreate(row.departamento);
-          const city = await this.cityService.findByNameOrCreate(dep.id, row.ciudad);
 
-          const already = await this.storeService.findByNameOne(row.nombre_almacen).catch(() => null);
+        try {
+          // CAMBIO: Verificar existencia por id_almacen (código) en lugar de nombre_almacen
+          const already = await this.storeService.findByCode(row.id_almacen); // Asume que tienes storeService.findByCode
+
           if (already) {
-            skipped++;
-            await qr.rollbackTransaction();
+            this.logger.warn(`TIENDA: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Almacén: ${row.id_almacen}): Ya existe un almacén con este código. Omitiendo.`);
+            if (qr.isTransactionActive) await qr.rollbackTransaction();
+            skippedThisGroup++;
             continue;
           }
 
+          const dep = await this.departService.findByNameOrCreate(row.departamento);
+          const city = await this.cityService.findByNameOrCreate(dep.id, row.ciudad);
+
           let userId: string;
           try {
-            console.log('Buscando usuario por email:', row.email);
             const user = await this.userClient.findByEmail(row.email, token);
             userId = user.id;
-            console.log('Usuario encontrado:', userId);
-          } catch {
-            const roleId = await this.roleClient.ensureRole('Manager', token);
-            const [first, ...rest] = row.gerente.split(' ');
-            const createdUser = await this.userClient.createUserWithRole(
-              roleId,
-              {
-                name: first,
-                lastName: rest.join(' '),
-                gender: 'Masculino',
-                email: row.email,
-                password: 'DefaultP@ss123',
-                cellPhone: 3145919465,
-                landline: 0,
-                IDType: 'CC',
-                IDNumber: Math.random().toString().slice(2, 10),
-              },
-              token,
-            );
-            const userEmail = await this.userClient.findByEmail(createdUser.user.email, token);
-            userId = userEmail.id;
-            console.log('Usuario creado:', userId);
+          } catch (userError) {
+            this.logger.warn(`TIENDA: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (Email: ${row.email}): Usuario no encontrado. Creando... (Error original: ${userError})`);
+            try {
+              const roleId = await this.roleClient.ensureRole('Manager', token);
+              const [first, ...rest] = row.gerente.split(' ');
+
+              const createdUser = await this.userClient.createUserWithRole(
+                roleId,
+                {
+                  name: first,
+                  lastName: rest.join(' '),
+                  gender: 'Masculino',
+                  email: row.email,
+                  password: 'DefaultP@ss123', // ¡¡URGENTE!! Cambiar.
+                  cellPhone: parseInt(row.telefono, 10) || 3145919465,
+                  landline: 0,
+                  IDType: 'CC',
+                  IDNumber: Math.random().toString().slice(2, 12),
+                },
+                token,
+              );
+              const userEmailData = await this.userClient.findByEmail(createdUser.user.email, token);
+              userId = userEmailData.id;
+            } catch (createUserError) {
+              this.logger.error(`TIENDA: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (Email: ${row.email}): Error CRÍTICO creando usuario: ${createUserError}. La fila se omitirá.`);
+              throw createUserError;
+            }
           }
 
           await this.storeService.create(
             city.id,
             userId,
             {
-              code: row.id_almacen,
+              code: row.id_almacen, // Este es el id_almacen del CSV
               name: row.nombre_almacen,
               address: row.direccion,
               postalCode: row.codigo_postal,
@@ -199,54 +235,115 @@ export class CsvService {
           );
 
           await qr.commitTransaction();
-          created++;
+          createdThisGroup++;
         } catch (err) {
-          console.error('Error al procesar fila:', row, err);
-          await qr.rollbackTransaction();
-          skipped++;
+          this.logger.error(`TIENDA: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Almacén: ${row.id_almacen || 'N/A'}): Error procesando: ${err}`);
+          if (qr.isTransactionActive) {
+            try {
+              await qr.rollbackTransaction();
+            } catch (rollbackErr) {
+              this.logger.error(`TIENDA: Grupo #${groupNumber}, Fila #${indexInGroup + 1}: Error durante el rollback de QR: ${rollbackErr}`);
+            }
+          }
+          skippedThisGroup++;
         } finally {
-          await qr.release();
+          if (!qr.isReleased) {
+            await qr.release();
+          }
         }
       }
+
+      this.logger.log(`TIENDA: Grupo de filas #${groupNumber} completado. Creados en este grupo: ${createdThisGroup}, Omitidos en este grupo: ${skippedThisGroup}.`);
+      return { createdInGroup: createdThisGroup, skippedInGroup: skippedThisGroup };
     };
 
-    const batches: StoreCsvRow[][] = [];
-    for (let i = 0; i < rows.length; i += batchSize) {
-      batches.push(rows.slice(i, i + batchSize));
+    const groupsOfRows: StoreCsvRow[][] = [];
+    for (let i = 0; i < rows.length; i += rowProcessingGroupSize) {
+      groupsOfRows.push(rows.slice(i, i + rowProcessingGroupSize));
     }
+    this.logger.log(`TIENDA: Se han creado ${groupsOfRows.length} grupos de filas para pLimit, cada grupo con hasta ${rowProcessingGroupSize} filas.`);
 
-    await Promise.all(
-      batches.map(batch => limit(() => processBatch(batch)))
+    const groupProcessingPromises = groupsOfRows.map((group, index) =>
+      limit(() => processRowGroup(group, index + 1))
     );
 
-    return { created, skipped };
+    try {
+      const allGroupResults = await Promise.all(groupProcessingPromises);
+      for (const result of allGroupResults) {
+        totalCreated += result.createdInGroup;
+        totalSkipped += result.skippedInGroup;
+      }
+    } catch (overallError) {
+      this.logger.error(`Error general inesperado durante el procesamiento de lotes de tiendas: ${overallError}`);
+    }
+
+    this.logger.log(`Importación de TIENDAS (sin modificar servicios) finalizada. Total Creados: ${totalCreated}, Total Omitidos: ${totalSkipped}.`);
+    return { created: totalCreated, skipped: totalSkipped };
   }
 
-  async importProducts(buffer: Buffer): Promise<{ created: number; skipped: number }> {
-    const text = buffer.toString('utf-8');
-    const rows = parse(text, {
-      delimiter: ';',
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    }) as ProductCsvRow[];
 
-    let created = 0;
-    let skipped = 0;
+
+  async importProducts(buffer: Buffer): Promise<{ created: number; skipped: number }> {
+    this.logger.log('Iniciando importación de PRODUCTOS desde CSV (modo: sin modificar servicios).');
+    const text = buffer.toString('utf-8');
+    let rows: ProductCsvRow[];
+
+    try {
+      rows = parse(text, {
+        delimiter: ';',
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        bom: true,            // CORRECCIÓN: Para manejar el Byte Order Mark
+        relax_quotes: true,   // CORRECCIÓN: Para permitir comillas dentro de campos no entrecomillados
+      }) as ProductCsvRow[];
+      this.logger.log(`Parseadas ${rows.length} filas del CSV de productos. (Alerta de memoria si es grande)`);
+    } catch (parseError) {
+      this.logger.error('Error CRÍTICO durante el parseo del CSV de productos:', parseError);
+      this.logger.error(`Detalles del error de , Message: ${parseError}`);
+      // Es importante detenerse aquí si el parseo falla.
+      // El controlador debería capturar esta excepción.
+      throw new InternalServerErrorException(`Error al parsear el CSV de productos: ${parseError}`);
+    }
+
+    let totalCreated = 0;
+    let totalSkipped = 0;
 
     const limit = pLimit(5);
-    const batchSize = 50;
+    const productProcessingGroupSize = 50; // Filas por cada grupo que maneja pLimit
 
-    const processBatch = async (batch: ProductCsvRow[]) => {
-      for (const row of batch) {
+    const processProductRowGroup = async (
+      rowGroup: ProductCsvRow[],
+      groupNumber: number
+    ): Promise<{ createdInGroup: number; skippedInGroup: number }> => {
+      let createdThisGroup = 0;
+      let skippedThisGroup = 0;
+
+      for (const [indexInGroup, row] of rowGroup.entries()) {
+        // Logs de depuración (opcional, puedes removerlos o cambiar a verbose)
+        // this.logger.debug(`--- PRODUCTO DEBUG --- Grupo #${groupNumber}, Fila #${indexInGroup + 1}`);
+        // this.logger.debug(`Contenido bruto: ${JSON.stringify(row)}`);
+        // this.logger.debug(`Claves: ${Object.keys(row).join(', ')}`);
+
         const required = [
           'id_producto', 'id_almacen', 'nombre_producto', 'categoria', 'descripcion',
           'sku', 'codigo_barras', 'precio_unitario', 'cantidad_stock', 'nivel_reorden',
           'ultima_reposicion', 'peso_kg', 'dimensiones_cm', 'es_fragil',
           'requiere_refrigeracion', 'estado'
+          // 'fecha_vencimiento' y 'id_proveedor' se manejan como opcionales más abajo.
+          // Si son estrictamente requeridos, añádelos aquí.
         ];
-        if (required.some(f => !row[f])) {
-          skipped++;
+
+        // Bucle de depuración para campos (opcional)
+        // for (const field of required) {
+        //   if (!row[field] && typeof row[field] !== 'boolean') { // typeof row[field] !== 'boolean' para que false no cuente como "faltante"
+        //     this.logger.warn(`(Debug Producto) Campo requerido '${field}' Falsy. Valor: '${row[field]}', Tipo: ${typeof row[field]}`);
+        //   }
+        // }
+
+        if (required.some(f => !row[f] && typeof row[f] !== 'boolean')) { // `false` es un valor válido para es_fragil/requiere_refrigeracion
+          this.logger.warn(`PRODUCTO: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Producto: ${row.id_producto || 'N/A'}): Faltan campos requeridos. Omitiendo.`);
+          skippedThisGroup++;
           continue;
         }
 
@@ -257,8 +354,9 @@ export class CsvService {
         try {
           const store = await this.storeService.findByCode(row.id_almacen);
           if (!store) {
-            skipped++;
-            await qr.rollbackTransaction();
+            this.logger.warn(`PRODUCTO: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Prod: ${row.id_producto}): Almacén con código ${row.id_almacen} no encontrado. Omitiendo producto.`);
+            if (qr.isTransactionActive) await qr.rollbackTransaction();
+            skippedThisGroup++;
             continue;
           }
 
@@ -267,13 +365,13 @@ export class CsvService {
           const [d, m, y] = row.ultima_reposicion.split('/');
           const dateEntry = new Date(+y, +m - 1, +d);
 
-          let expirationDate = dateEntry;
-          if (row.fecha_vencimiento) {
+          let expirationDate = dateEntry; // Lógica original: por defecto es dateEntry
+          if (row.fecha_vencimiento && row.fecha_vencimiento.trim() !== '') {
             const [dd, mm, yy] = row.fecha_vencimiento.split('/');
             expirationDate = new Date(+yy, +mm - 1, +dd);
           }
 
-          const [lengthCm, widthCm, heightCm] = row.dimensiones_cm.split('x').map(n => parseFloat(n) || 0);
+          const [lengthCm = 0, widthCm = 0, heightCm = 0] = row.dimensiones_cm.split('x').map(n => parseFloat(n) || 0);
 
           const product = await this.productService.create(category.id, {
             name: row.nombre_producto,
@@ -289,39 +387,72 @@ export class CsvService {
             lengthCm,
             widthCm,
             heightCm,
-            isFragile: row.es_fragil.toLowerCase() === 'true',
-            requiresRefurbishment: row.requiere_refrigeracion.toLowerCase() === 'true',
+            isFragile: String(row.es_fragil).toLowerCase() === 'true',
+            requiresRefurbishment: String(row.requiere_refrigeracion).toLowerCase() === 'true', // Asumo typo, debería ser 'refrigeration'
             status: row.estado,
           });
 
-          const supplier = await this.supplierService.findByNameOrCreate(row.id_proveedor);
-          await this.provisionService.create(product.id, supplier.id);
+          if (row.id_proveedor && row.id_proveedor.trim() !== '') {
+            const supplier = await this.supplierService.findByNameOrCreate(row.id_proveedor);
+            await this.provisionService.create(product.id, supplier.id);
+          } else {
+            this.logger.warn(`PRODUCTO: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Prod: ${row.id_producto}): No se proporcionó id_proveedor. No se creará provisión.`);
+          }
+
           await this.inventoryService.create(store.id, product.id);
 
           await qr.commitTransaction();
-          created++;
+          createdThisGroup++;
         } catch (err) {
-          console.error('Error importProducts fila:', row, err);
-          await qr.rollbackTransaction();
-          skipped++;
+          this.logger.error(`PRODUCTO: Grupo #${groupNumber}, Fila #${indexInGroup + 1} (ID Prod: ${row.id_producto || 'N/A'}): Error procesando: ${err}`);
+          if (qr.isTransactionActive) {
+            try {
+              await qr.rollbackTransaction();
+            } catch (rollbackErr) {
+              this.logger.error(`PRODUCTO: Grupo #${groupNumber}, Fila #${indexInGroup + 1}: Error durante rollback de QR: ${rollbackErr}`);
+            }
+          }
+          skippedThisGroup++;
         } finally {
-          await qr.release();
+          if (!qr.isReleased) {
+            await qr.release();
+          }
         }
-      }
-    };
+      } // Fin del bucle for (const row of rowGroup)
 
-    const batches: ProductCsvRow[][] = [];
-    for (let i = 0; i < rows.length; i += batchSize) {
-      batches.push(rows.slice(i, i + batchSize));
+      // this.logger.log(`PRODUCTO: Grupo #${groupNumber} completado. Creados: ${createdThisGroup}, Omitidos: ${skippedThisGroup}.`);
+      return { createdInGroup: createdThisGroup, skippedInGroup: skippedThisGroup };
+    }; // Fin de processProductRowGroup
+
+    const productGroups: ProductCsvRow[][] = [];
+    for (let i = 0; i < rows.length; i += productProcessingGroupSize) {
+      productGroups.push(rows.slice(i, i + productProcessingGroupSize));
     }
+    this.logger.log(`PRODUCTO: Creados ${productGroups.length} grupos para pLimit, hasta ${productProcessingGroupSize} filas/grupo.`);
 
-    await Promise.all(
-      batches.map(batch => limit(() => processBatch(batch)))
+    const productGroupPromises = productGroups.map((group, index) =>
+      limit(() => processProductRowGroup(group, index + 1))
     );
 
-    return { created, skipped };
+    // Esperar a que todos los grupos se procesen
+    // Envolver Promise.all en un try-catch general por si alguna promesa rechaza de forma inesperada
+    // y no es manejada por pLimit o processProductRowGroup como se espera.
+    try {
+      const allProductResults = await Promise.all(productGroupPromises);
+      for (const result of allProductResults) {
+        totalCreated += result.createdInGroup;
+        totalSkipped += result.skippedInGroup;
+      }
+    } catch (overallError) {
+      this.logger.error(`Error general inesperado durante el procesamiento de lotes de productos: ${overallError}`);
+      // Decide cómo manejar esto. Podrías querer que la función lance una excepción aquí.
+      // Por ahora, los productos procesados hasta el error se contarán, y el resto no.
+      // O podrías lanzar: throw new InternalServerErrorException('Fallo el procesamiento de lotes de productos.');
+    }
+
+
+    this.logger.log(`Importación de PRODUCTOS (sin modificar servicios) finalizada. Total Creados: ${totalCreated}, Total Omitidos: ${totalSkipped}.`);
+    return { created: totalCreated, skipped: totalSkipped };
   }
-
-
 
 }
