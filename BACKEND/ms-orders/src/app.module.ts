@@ -1,49 +1,35 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
-import { APP_GUARD } from '@nestjs/core';
-import { JwtModule } from '@nestjs/jwt';
-
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-
-import { OrderModule } from './order/order.module';
-import { OrderEntity } from './order/entities/order.entity';
-
-import { JwtAuthGuard } from './order/guard/jwt-auth.guard';
-import { RolesGuard } from './order/guard/roles.guard';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { OrdersModule } from './orders/orders.module';
+import { ItemsModule } from './items/items.module';
+import { AssignmentsModule } from './assignments/assignments.module';
+import { Order } from './orders/entities/order.entity';
+import { Item } from './items/entities/item.entity';
+import { Assignment } from './assignments/entities/assignment.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST,
-      port: 3306,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      entities: [OrderEntity],
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
     }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'defaultSecret',
-      signOptions: { expiresIn: '1h' },
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [Order, Item, Assignment],
+        synchronize: true,
+      }),
     }),
-    OrderModule,
-  ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
+    OrdersModule,
+    ItemsModule,
+    AssignmentsModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}
