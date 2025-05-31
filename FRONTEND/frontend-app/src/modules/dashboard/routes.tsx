@@ -1,5 +1,4 @@
-import React, { lazy, Suspense } from "react";
-import { Outlet } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
 const Dashboard = lazy(() => import("./views/Dashboard"));
 const RolesPage = lazy(() => import("../roles/views/RolesPage"));
@@ -7,6 +6,8 @@ const PermissionsPage = lazy(() => import("../permissions/views/PermissionsPage"
 const UsersPage = lazy(() => import("../user/views/UsersPage"));
 const AccessPage = lazy(() => import("../access/views/AccessPage"));
 const Profile = lazy(() => import("../user/components/Profile"));
+const DepartmentsPage = lazy(() => import("../departament/views/DepartmentPage"));
+const CitiesPage = lazy(() => import("../city/views/CitiesPage"));
 
 const dashboardRoutes = [
   {
@@ -54,6 +55,22 @@ const dashboardRoutes = [
         element: (
           <Suspense fallback={<div>Loading profile...</div>}>
             <Profile />
+          </Suspense>
+        ),
+      },
+      {
+        path: "departments",
+        element: (
+          <Suspense fallback={<div>Loading departments...</div>}>
+            <DepartmentsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "cities",
+        element: (
+          <Suspense fallback={<div>Loading cities...</div>}>
+            <CitiesPage />
           </Suspense>
         ),
       },

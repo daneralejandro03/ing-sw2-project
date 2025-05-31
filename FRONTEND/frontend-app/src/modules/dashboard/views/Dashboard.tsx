@@ -137,6 +137,18 @@ const Sidebar = ({
         >
           Access
         </button>
+        <button
+          onClick={() => goTo("/dashboard/departments")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Departamentos
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/cities")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Ciudades
+        </button>
       </>
     )}
   </>

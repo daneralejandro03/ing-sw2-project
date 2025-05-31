@@ -6,6 +6,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
+
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
@@ -19,7 +24,7 @@ async function bootstrap() {
     .setDescription('En este microservicio esta toda la logica del negocio de inventario')
     .setVersion('1.0')
     .addBearerAuth()
-    .addServer('http://localhost:3002', 'Local Dev')
+    .addServer('http://localhost:3010', 'Local Dev')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
