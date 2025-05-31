@@ -11,7 +11,7 @@ const ResetPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4Mjc2NDYyM2RhMGQyMWY3NTE2N2UwYSIsImlhdCI6MTc0NzYwMTExNCwiZXhwIjoxNzQ3NjA0NzE0fQ.sRH-svvfIZbn0B4frPv01TgLYq4sloqpep7bQm2CvDE";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4Mjc2NDYyM2RhMGQyMWY3NTE2N2UwYSIsImlhdCI6MTc0ODU0Njg2NiwiZXhwIjoxNzQ4NTUwNDY2fQ.knbkt3KV-q5e-dO1aOvyFn5XfdZHQl4K56vDdopba9I";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
