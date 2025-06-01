@@ -23,10 +23,6 @@ const VerifyAccount: React.FC = () => {
     exp: number;
   };
 
-  const chargeLocalStorage = () => {
-
-  }
-
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {

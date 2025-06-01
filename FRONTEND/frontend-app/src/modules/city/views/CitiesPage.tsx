@@ -1,4 +1,3 @@
-// src/pages/CitiesPage.tsx
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, Select } from "antd";
 import { Trash2, Edit } from "lucide-react";
@@ -66,6 +65,7 @@ const CitiesPage: React.FC = () => {
     const departamentId = values.departamentId;
     try {
       if (editCity) {
+        alert(JSON.stringify(values))
         await cityService.update(name, editCity.id);
         await Swal.fire("Actualizado", "La ciudad ha sido actualizada.", "success");
       } else {
@@ -94,7 +94,7 @@ const CitiesPage: React.FC = () => {
     { title: "Nombre", dataIndex: "name", key: "name" },
     {
       title: "Departamento",
-      dataIndex: "idDepartment",
+      dataIndex: "departament",
       key: "idDepartment",
       render: (dept: any) => dept?.name || "Sin departamento",
     },

@@ -1,0 +1,54 @@
+import axios from "axios";
+import endpoints from "./supplierEndpoints";
+import type { Supplier } from "../types/Supplier";
+
+const api = axios.create({
+  baseURL:
+    import.meta.env.VITE_APP_API_AWS_ENDPOINT_PREFIJO ||
+    "http://localhost:3010/api/v1",
+});
+
+const supplierService = {
+  async create(payload: Supplier) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.post(endpoints.create, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+  async list() {
+    const token = localStorage.getItem("token");
+    const { data } = await api.get(endpoints.list, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+  async delete(id: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.delete(endpoints.delete(id), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
+  async update(payload: Supplier, id: string) {
+    const token = localStorage.getItem("token");
+    const { data } = await api.patch(endpoints.update(id), payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+  
+};
+
+export default supplierService;

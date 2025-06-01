@@ -149,6 +149,30 @@ const Sidebar = ({
         >
           Ciudades
         </button>
+        <button
+          onClick={() => goTo("/dashboard/stores")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Stores
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/categories")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Categorias
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/suppliers")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Proveedores
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/products")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Productos
+        </button>
       </>
     )}
   </>

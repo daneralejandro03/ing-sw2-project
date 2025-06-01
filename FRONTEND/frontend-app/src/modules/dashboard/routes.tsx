@@ -8,6 +8,10 @@ const AccessPage = lazy(() => import("../access/views/AccessPage"));
 const Profile = lazy(() => import("../user/components/Profile"));
 const DepartmentsPage = lazy(() => import("../departament/views/DepartmentPage"));
 const CitiesPage = lazy(() => import("../city/views/CitiesPage"));
+const StorePage = lazy(() => import("../storeModule/views/StorePage"));
+const CategoryPage = lazy(() => import("../category/views/CategoryPage"));
+const SupplierPage = lazy(() => import("../supplier/views/SupplierPage"));
+const ProductPage = lazy(() => import("../product/views/ProductPage"));
 
 const dashboardRoutes = [
   {
@@ -71,6 +75,38 @@ const dashboardRoutes = [
         element: (
           <Suspense fallback={<div>Loading cities...</div>}>
             <CitiesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "stores",
+        element: (
+          <Suspense fallback={<div>Loading stores...</div>}>
+            <StorePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "categories",
+        element: (
+          <Suspense fallback={<div>Loading categories...</div>}>
+            <CategoryPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "suppliers",
+        element: (
+          <Suspense fallback={<div>Loading proveedores...</div>}>
+            <SupplierPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "products",
+        element: (
+          <Suspense fallback={<div>Loading product...</div>}>
+            <ProductPage />
           </Suspense>
         ),
       },
