@@ -12,6 +12,7 @@ const StorePage = lazy(() => import("../storeModule/views/StorePage"));
 const CategoryPage = lazy(() => import("../category/views/CategoryPage"));
 const SupplierPage = lazy(() => import("../supplier/views/SupplierPage"));
 const ProductPage = lazy(() => import("../product/views/ProductPage"));
+const ProvisionPage = lazy(() => import("../provision/views/ProvisionPage"));
 
 const dashboardRoutes = [
   {
@@ -107,6 +108,14 @@ const dashboardRoutes = [
         element: (
           <Suspense fallback={<div>Loading product...</div>}>
             <ProductPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "provisions",
+        element: (
+          <Suspense fallback={<div>Loading provisions...</div>}>
+            <ProvisionPage />
           </Suspense>
         ),
       },
