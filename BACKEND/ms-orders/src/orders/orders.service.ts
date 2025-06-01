@@ -1,78 +1,150 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
+
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { Assignment } from 'src/assignments/entities/assignment.entity';
-import { Item } from 'src/items/entities/item.entity';
 
 @Injectable()
-export class OrderService {
+export class OrdersService {
   constructor(
     @InjectRepository(Order)
-    private readonly repo: Repository<Order>,
-    @InjectRepository(Item) private readonly itemsRepo: Repository<Item>,
-    @InjectRepository(Assignment)
-    private readonly assignmentsRepo: Repository<Assignment>,
-  ) {}
+    private readonly orderRepo: Repository<Order>,
+    private readonly httpService: HttpService,
+  ) { }
 
-  create(dto: CreateOrderDto): Promise<Order> {
-    const order = this.repo.create(dto);
-    return this.repo.save(order);
-  }
+  /**
+   * Crea una nueva orden:
+   * - userGuestId (ObjectId de MongoDB) y storeId (int) vienen por URL.
+   * - Resto de campos en CreateOrderDto (body).
+   * - authToken en cabecera para validar userGuestId.
+   */
+  async create(
+    userGuestId: string,
+    storeId: number,
+    createOrderDto: CreateOrderDto,
+    authToken: string,
+  ): Promise<Order> {
+    if (!authToken || !authToken.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token no provisto para llamadas a Seguridad.');
+    }
 
-  findAll(): Promise<Order[]> {
-  return this.repo.find({
-    relations: ['items', 'assignments'],
-  });
-}
+    // 1. Validar que userGuestId exista en el microservicio de Seguridad
+    try {
+      // Si tu Security expone GET /api/v1/user/:id en lugar de /users/:id, ajusta aquí:
+      const secBase = process.env.SECURITY_SERVICE_URL.replace(/\/$/, '');
+      const secUrl = `${secBase}/user/${userGuestId}`;
+      await firstValueFrom(
+        this.httpService.get(secUrl, {
+          headers: { Authorization: authToken },
+        })
+      );
+    } catch (err) {
+      // Si devuelve 404, significa que el usuario no existe
+      if ((err as AxiosError).response?.status === 404) {
+        throw new BadRequestException(
+          `El userGuestId "${userGuestId}" no existe en Seguridad.`,
+        );
+      }
+      // Cualquier otro error, informamos fallo de validación
+      throw new BadRequestException(
+        `Error validando userGuestId "${userGuestId}" en Seguridad.`,
+      );
+    }
 
+    // 2. Validar que storeId exista en el microservicio de Inventario
+    try {
+      const invBase = process.env.INVENTORY_SERVICE_URL.replace(/\/$/, '');
+      const invUrl = `${invBase}/store/${storeId}`;
+      await firstValueFrom(this.httpService.get(invUrl));
+    } catch (err) {
+      if ((err as AxiosError).response?.status === 404) {
+        throw new BadRequestException(
+          `El storeId "${storeId}" no existe en Inventario.`,
+        );
+      }
+      throw new BadRequestException(
+        `Error validando storeId "${storeId}" en Inventario.`,
+      );
+    }
 
-  async findOne(id: string): Promise<Order> {
-    const order = await this.repo.findOne({ where: { id } });
-    if (!order) throw new NotFoundException(`Order #${id} not found`);
-    return order;
-  }
+    // 3. Construir entidad Order (sin items ni assignments)
+    const orderEntity = this.orderRepo.create({
+      status: createOrderDto.status,
+      totalAmount: createOrderDto.totalAmount,
+      currency: createOrderDto.currency,
+      address1: createOrderDto.address1,
+      address2: createOrderDto.address2,
+      city: createOrderDto.city,
+      department: createOrderDto.department,
+      postalCode: createOrderDto.postalCode,
+      instructions: createOrderDto.instructions,
+      paymentMethod: createOrderDto.paymentMethod,
+      paymentStatus: createOrderDto.paymentStatus,
+      userGuestId,
+      storeId,
+      items: [],       // inicialmente vacío
+      assignments: [], // inicialmente vacío
+    });
 
-  async update(id: string, dto: UpdateOrderDto): Promise<Order> {
-    const order = await this.findOne(id);
-    Object.assign(order, dto);
-    return this.repo.save(order);
-  }
-
-  async remove(id: string): Promise<void> {
-    const result = await this.repo.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Order #${id} not found`);
+    try {
+      return await this.orderRepo.save(orderEntity);
+    } catch {
+      throw new InternalServerErrorException(
+        'Error persistiendo la orden en la base de datos.',
+      );
     }
   }
 
-  async associateItem(orderId: string, itemId: string): Promise<Item> {
-    const order = await this.findOne(orderId);
-    if (!order) throw new NotFoundException(`Order #${orderId} not found`);
-
-    const item = await this.itemsRepo.findOneBy({ id: itemId });
-    if (!item) throw new NotFoundException(`Item #${itemId} not found`);
-
-    item.order = order;
-    return this.itemsRepo.save(item);
+  async findAll(): Promise<Order[]> {
+    return this.orderRepo.find();
   }
 
-  async associateAssignment(
-    orderId: string,
-    assignmentId: string,
-  ): Promise<Assignment> {
-    const order = await this.repo.findOne({ where: { id: orderId } });
-    if (!order) throw new NotFoundException(`Order #${orderId} not found`);
+  async findOne(id: string): Promise<Order> {
+    const order = await this.orderRepo.findOne({ where: { id } });
+    if (!order) {
+      throw new BadRequestException(`No existe orden con id "${id}".`);
+    }
+    return order;
+  }
 
-    const assignment = await this.assignmentsRepo.findOne({
-      where: { id: assignmentId },
-    });
-    if (!assignment)
-      throw new NotFoundException(`Assignment #${assignmentId} not found`);
+  async update(
+    id: string,
+    updateData: Partial<CreateOrderDto>,
+    authToken: string,
+  ): Promise<Order> {
+    const existing = await this.orderRepo.findOne({ where: { id } });
+    if (!existing) {
+      throw new BadRequestException(`No existe orden con id "${id}".`);
+    }
 
-    assignment.order = order;
-    return this.assignmentsRepo.save(assignment);
+    // No permitir modificar userGuestId ni storeId aquí
+    delete (updateData as any).userGuestId;
+    delete (updateData as any).storeId;
+
+    const merged = this.orderRepo.merge(existing, updateData);
+    try {
+      return await this.orderRepo.save(merged);
+    } catch {
+      throw new InternalServerErrorException(
+        'Error al actualizar la orden en la base de datos.',
+      );
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    const existing = await this.orderRepo.findOne({ where: { id } });
+    if (!existing) {
+      throw new BadRequestException(`No existe orden con id "${id}".`);
+    }
+    await this.orderRepo.delete(id);
   }
 }

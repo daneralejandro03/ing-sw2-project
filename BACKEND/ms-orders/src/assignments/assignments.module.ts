@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Assignment } from './entities/assignment.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { HttpModule } from '@nestjs/axios';
+import { OrdersModule } from 'src/orders/orders.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Assignment]), AuthModule, HttpModule],
+  imports: [TypeOrmModule.forFeature([Assignment]), AuthModule, HttpModule, OrdersModule],
   controllers: [AssignmentsController],
   providers: [AssignmentsService]
 })
-export class AssignmentsModule {}
+export class AssignmentsModule { }

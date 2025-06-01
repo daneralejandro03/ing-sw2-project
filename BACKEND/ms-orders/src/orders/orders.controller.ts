@@ -1,119 +1,136 @@
 import {
   Controller,
-  Get,
   Post,
-  Put,
+  Get,
   Patch,
   Delete,
   Param,
   Body,
+  Headers,
   ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
-import { OrderService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
-  ApiResponse,
   ApiParam,
   ApiBody,
+  ApiResponse,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { OrdersService } from './orders.service';
+import { CreateOrderDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
-import { Item } from 'src/items/entities/item.entity';
-import { Assignment } from 'src/assignments/entities/assignment.entity';
 
-@ApiTags('Order')
+@ApiTags('Orders')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('orders')
-export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+export class OrdersController {
+  constructor(private readonly ordersService: OrdersService) { }
 
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  @ApiOperation({ summary: 'Crear una nuevo pedido' })
-  @ApiBody({ type: CreateOrderDto })
-  @ApiResponse({ status: 201, description: 'Pedido creado', type: Order })
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderService.create(createOrderDto);
+  @Post('userGuest/:userGuestId/store/:storeId')
+  @ApiOperation({ summary: 'Crear nueva orden' })
+  @ApiParam({
+    name: 'userGuestId',
+    type: 'string',
+    description: 'ID del usuario invitado (ObjectId de MongoDB)',
+    example: '605c3f1e2e8f4b1a9a123456',
+  })
+  @ApiParam({
+    name: 'storeId',
+    type: 'number',
+    description: 'ID de la tienda (entero)',
+    example: 42,
+  })
+  @ApiBody({ type: CreateOrderDto, description: 'Datos de la orden' })
+  @ApiResponse({ status: 201, description: 'Orden creada exitosamente.', type: Order })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o recurso no encontrado.' })
+  @ApiResponse({ status: 401, description: 'Token no provisto o inválido.' })
+  async create(
+    @Param('userGuestId') userGuestId: string,
+    @Param('storeId', ParseIntPipe) storeId: number,
+    @Headers('authorization') authHeader: string,
+    @Body() createOrderDto: CreateOrderDto,
+  ): Promise<Order> {
+    return this.ordersService.create(userGuestId, storeId, createOrderDto, authHeader);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los pedidos' })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado de pedidos',
-    type: [Order],
-  })
-  findAll() {
-    return this.orderService.findAll();
+  @ApiOperation({ summary: 'Listar todas las órdenes' })
+  @ApiResponse({ status: 200, description: 'Listado de órdenes.', type: [Order] })
+  async findAll(): Promise<Order[]> {
+    return this.ordersService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener un pedido por ID' })
-  @ApiParam({ name: 'id', type: String, description: 'ID del pedido' })
-  @ApiResponse({ status: 200, description: 'pedido encontrado', type: Order })
-  findOne(@Param('id', ParseIntPipe) id: string) {
-    return this.orderService.findOne(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un pedido existente' })
-  @ApiParam({ name: 'id', type: Number, description: 'ID del pedido' })
-  @ApiBody({ type: UpdateOrderDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Pedido actualizado',
-    type: Order,
+  @ApiOperation({ summary: 'Obtener orden por ID' })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'ID de la orden (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  update(
-    @Param('id', ParseIntPipe) id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-  ) {
-    return this.orderService.update(id, updateOrderDto);
+  @ApiResponse({ status: 200, description: 'Orden encontrada.', type: Order })
+  @ApiResponse({ status: 400, description: 'Orden no encontrada.' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Order> {
+    return this.ordersService.findOne(id);
   }
 
   @Patch(':id')
-  updatePartial(
-    @Param('id', ParseIntPipe) id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-  ) {
-    return this.orderService.update(id, updateOrderDto);
+  @ApiOperation({ summary: 'Actualizar orden existente' })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'ID de la orden a actualizar',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['UNASSIGNED', 'ASSIGNED', 'ATTEMPTED', 'REJECTED'] },
+        totalAmount: { type: 'number' },
+        currency: { type: 'string', example: 'USD' },
+        address1: { type: 'string' },
+        address2: { type: 'string', nullable: true },
+        city: { type: 'string' },
+        department: { type: 'string' },
+        postalCode: { type: 'number' },
+        instructions: { type: 'string', nullable: true },
+        paymentMethod: { type: 'string', enum: ['CREDITCARD', 'CASH'] },
+        paymentStatus: { type: 'string', enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'] },
+      },
+    },
+    description: 'Campos para actualizar en la orden',
+  })
+  @ApiResponse({ status: 200, description: 'Orden actualizada.', type: Order })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o orden no existente.' })
+  @ApiResponse({ status: 401, description: 'Token no provisto o inválido.' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('authorization') authHeader: string,
+    @Body() updateData: Partial<CreateOrderDto>,
+  ): Promise<Order> {
+    return this.ordersService.update(id, updateData, authHeader);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un pedido' })
-  @ApiParam({ name: 'id', type: String, description: 'ID del pedido' })
-  @ApiResponse({ status: 200, description: 'pedido eliminado' })  remove(@Param('id', ParseIntPipe) id: string) {
-    return this.orderService.remove(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':orderId/items/:itemId')
-  @ApiOperation({ summary: 'Asociar un ítem existente a un pedido' })
-  @ApiParam({ name: 'orderId', description: 'ID del pedido' })
-  @ApiParam({ name: 'itemId', description: 'ID del ítem' })
-  associateItem(
-    @Param('orderId') orderId: string,
-    @Param('itemId') itemId: string,
-  ): Promise<Item> {
-    return this.orderService.associateItem(orderId, itemId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':orderId/assignments/:assignmentId')
-  @ApiOperation({ summary: 'Asociar una asignación existente a un pedido' })
-  @ApiParam({ name: 'orderId', description: 'ID del pedido' })
-  @ApiParam({ name: 'assignmentId', description: 'ID de la asignación' })
-  associateAssignment(
-    @Param('orderId') orderId: string,
-    @Param('assignmentId') assignmentId: string,
-  ): Promise<Assignment> {
-    return this.orderService.associateAssignment(orderId, assignmentId);
+  @ApiOperation({ summary: 'Eliminar orden por ID' })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'ID de la orden a eliminar',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({ status: 204, description: 'Orden eliminada.' })
+  @ApiResponse({ status: 400, description: 'Orden no encontrada.' })
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.ordersService.remove(id);
   }
 }

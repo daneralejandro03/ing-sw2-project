@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Order } from 'src/orders/entities/order.entity';
 
 @Entity({ name: 'items' })
@@ -6,22 +12,36 @@ export class Item {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ length: 255 })
   name: string;
 
-  @Column()
+  @Column({ type: 'int' })
   quantity: number;
 
-  @Column('decimal')
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+  })
   unitPrice: number;
 
-  @Column('decimal')
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+  })
   totalPrice: number;
 
-  @ManyToOne(() => Order, (order) => order.id, { eager: false })
+  // --------------------------------------------
+  // Relación ManyToOne con Order; crea columna orderId
+  // --------------------------------------------
+  @ManyToOne(() => Order, (order) => order.items, { eager: false })
   @JoinColumn({ name: 'orderId' })
   order: Order;
 
-  @Column()
-  product: string;
+  // --------------------------------------------
+  // productId es number que viene de Inventario
+  // --------------------------------------------
+  @Column({ type: 'int' })
+  productId: number;
 }

@@ -1,12 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Order } from 'src/orders/entities/order.entity';
+import { OrderStatus } from 'src/shared/enums/order-status.enum';
 
-export enum Type {
-  ATTEMPTED = 'attempted',
-  ASSIGNED = 'assigned',
-  REJECTED = 'rejected',
-  UNASSIGNED = 'unassigned',
-}
 
 @Entity({ name: 'assignments' })
 export class Assignment {
@@ -18,18 +13,15 @@ export class Assignment {
 
   @Column({
     type: 'enum',
-    enum: Type,
+    enum: OrderStatus,
   })
-  status: Type;
+  status: OrderStatus;
 
   @Column()
   note: string;
 
   @Column()
-  userDeliveryUser: string;
-
-  @Column('uuid')
-  orderId: string;
+  userDeliveryDriver: string;
 
   @ManyToOne(() => Order, { eager: true })
   @JoinColumn({ name: 'orderId' })

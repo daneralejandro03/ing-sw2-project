@@ -1,38 +1,38 @@
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class CreateItemDto {
-  @ApiProperty({ description: 'Nombre del ítem' })
+  @ApiProperty({
+    description: 'Nombre descriptivo del ítem',
+    maxLength: 255,
+    example: 'Camiseta roja talla M',
+  })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   name: string;
 
-  @ApiProperty({ description: 'Cantidad del ítem' })
-  @Type(() => Number)
+  @ApiProperty({
+    description: 'Cantidad de unidades de este ítem (entero mínimo 1)',
+    minimum: 1,
+    example: 2,
+  })
   @IsNumber()
-  @IsPositive()
+  @Min(1)
   quantity: number;
 
-  @ApiProperty({ description: 'Precio unitario del ítem' })
-  @Type(() => Number)
+  @ApiProperty({
+    description: 'Precio unitario del producto (número >= 0)',
+    minimum: 0,
+    example: 25.5,
+  })
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   unitPrice: number;
-
-  @ApiProperty({ description: 'Precio total del ítem' })
-  @Type(() => Number)
-  @IsNumber()
-  @IsPositive()
-  totalPrice: number;
-
-  @ApiProperty({ description: 'ID del producto asociado' })
-  @IsString()
-  @IsNotEmpty()
-  product: string;
-
-  @ApiProperty({ description: 'ID de la orden a la que pertenece' })
-  @IsString()
-  @IsNotEmpty()
-  orderId: string;
 }
