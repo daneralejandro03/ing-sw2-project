@@ -13,6 +13,7 @@ const CategoryPage = lazy(() => import("../category/views/CategoryPage"));
 const SupplierPage = lazy(() => import("../supplier/views/SupplierPage"));
 const ProductPage = lazy(() => import("../product/views/ProductPage"));
 const ProvisionPage = lazy(() => import("../provision/views/ProvisionPage"));
+const InventoryPage = lazy(() => import("../inventory/views/InventoryPage"));
 
 const dashboardRoutes = [
   {
@@ -116,6 +117,14 @@ const dashboardRoutes = [
         element: (
           <Suspense fallback={<div>Loading provisions...</div>}>
             <ProvisionPage />
+          </Suspense>
+        ),
+      },
+       {
+        path: "inventaries",
+        element: (
+          <Suspense fallback={<div>Loading inventories...</div>}>
+            <InventoryPage />
           </Suspense>
         ),
       },

@@ -179,6 +179,12 @@ const Sidebar = ({
         >
           Provisiones
         </button>
+        <button
+          onClick={() => goTo("/dashboard/inventaries")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Inventarios
+        </button>
       </>
     )}
   </>
