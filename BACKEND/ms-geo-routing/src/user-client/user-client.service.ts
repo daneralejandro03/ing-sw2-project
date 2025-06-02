@@ -148,4 +148,55 @@ export class UserClientService {
     }
   }
 
+  async findAll(token: string): Promise<UserTokenDto[]> {
+    try {
+      // Ajusta 'user' si el endpoint en ms-security es diferente (ej. 'users')
+      const response = await this.requestGet<any[]>(`user`, token);
+
+      if (!Array.isArray(response.data)) {
+        console.error(
+          'Respuesta inesperada del servicio de usuarios (se esperaba un array):',
+          response.data,
+        );
+        throw new InternalServerErrorException(
+          'Formato de respuesta inválido del servicio de usuarios.',
+        );
+      }
+
+      return response.data.map((rawUser) => {
+        if (!rawUser || typeof rawUser !== 'object') {
+          console.warn('Omitiendo dato de usuario inválido:', rawUser);
+          return null;
+        }
+        const roleId = rawUser.role && typeof rawUser.role === 'object'
+          ? rawUser.role._id
+          : rawUser.role;
+
+        if (!roleId) {
+          console.warn(`Usuario ${rawUser._id || 'desconocido'} no tiene ID de rol válido.`);
+        }
+
+        return {
+          id: rawUser._id,
+          email: rawUser.email,
+          estado: rawUser.estado,
+          role: roleId as string,
+        };
+      }).filter(user => user !== null) as UserTokenDto[];
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = (err as AxiosError).response?.status;
+        if (status === 401) {
+          throw new UnauthorizedException(
+            'Token inválido o expirado para el servicio de usuarios.',
+          );
+        }
+      }
+      console.error('Error obteniendo todos los usuarios desde el Servicio de Seguridad:', err);
+      throw new InternalServerErrorException(
+        `Error obteniendo todos los usuarios desde el Servicio de Seguridad: ${(err as Error).message
+        }`,
+      );
+    }
+  }
 }

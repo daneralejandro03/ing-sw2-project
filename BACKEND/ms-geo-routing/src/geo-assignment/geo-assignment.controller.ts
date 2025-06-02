@@ -16,6 +16,8 @@ import { GeoAssignmentService } from './geo-assignment.service';
 import { CreateGeoAssignmentDto } from './dto/create-geo-assignment.dto';
 import { UpdateGeoAssignmentDto } from './dto/update-geo-assignment.dto';
 import { GeoAssignment } from './entities/geo-assignment.entity';
+import { AssignmentResponse } from '../assignment/interface/AssignmentResponse.interface';
+
 
 import {
   ApiTags,
@@ -32,6 +34,29 @@ import {
 export class GeoAssignmentController {
   constructor(private readonly geoService: GeoAssignmentService) { }
 
+
+  // --- NUEVO ENDPOINT PARA ASIGNACIÓN POR PROXIMIDAD ---
+  @Post('assignProximity/order/:orderId')
+  @ApiOperation({ summary: 'Asignar orden al repartidor más cercano y crear GeoAssignment' })
+  @ApiParam({ name: 'orderId', description: 'ID de la Orden (UUID o string)', type: String })
+  @ApiResponse({
+    status: 201,
+    description: 'Orden asignada y GeoAssignment creado (si aplica). Devuelve la asignación y el geo-assignment.',
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o la orden no se puede asignar.' })
+  @ApiResponse({ status: 401, description: 'Token no provisto o inválido.' })
+  @ApiResponse({ status: 404, description: 'Recurso no encontrado (orden, tienda, repartidores).' })
+  async assignByProximity(
+    @Param('orderId') orderId: string,
+    @Headers('authorization') authHeader: string,
+  ): Promise<{ assignment: AssignmentResponse, geoAssignment?: GeoAssignment }> {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token no provisto o con formato incorrecto.');
+    }
+    const token = authHeader.substring(7); // Extrae el token
+    return this.geoService.assignOrderToNearestDriverAndCreateGeoAssignment(orderId, token);
+  }
+
   /**
    * POST /geo-assignments
    * - Headers: Authorization: 'Bearer <token>' (para validar el usuario/repartidor en JwtAuthGuard)
@@ -39,7 +64,7 @@ export class GeoAssignmentController {
    * Crea un nuevo GeoAssignment con su Route y sus Segments.
    */
   @Post()
-  @ApiOperation({ summary: 'Crear nuevo GeoAssignment' })
+  @ApiOperation({ summary: 'Crear nuevo GeoAssignment (directamente si ya existe una asignación)' })
   @ApiBody({ type: CreateGeoAssignmentDto })
   @ApiResponse({
     status: 201,
@@ -52,9 +77,10 @@ export class GeoAssignmentController {
     @Headers('authorization') authHeader: string,
   ): Promise<GeoAssignment> {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Token no provisto');
+      throw new UnauthorizedException('Token no provisto o con formato incorrecto');
     }
-    const token = authHeader.slice(7); // Eliminamos "Bearer "
+    const token = authHeader.substring(7); // Eliminamos "Bearer" 
+    console.log(`Token recibido: ${token}`); // Para depuración, puedes eliminarlo en producción   
     return this.geoService.create(createDto, token);
   }
 

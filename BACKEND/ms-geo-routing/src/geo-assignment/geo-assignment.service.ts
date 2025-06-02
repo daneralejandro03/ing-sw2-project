@@ -19,6 +19,17 @@ import { SegmentService } from '../segment/segment.service';
 import { AssignmentService } from '../assignment/assignment.service';
 import { ConfigService } from '@nestjs/config';
 import { LocationService } from '../location/location.service';
+import { CreateAssignmentDto } from '../assignment/dto/create-assignment.dto';
+import { AssignmentResponse } from '../assignment/interface/AssignmentResponse.interface';
+
+import { UserClientService } from '../user-client/user-client.service';
+import { RoleClientService } from '../role-client/role-client.service';
+import { RouteService } from '../route/route.service';
+
+
+import { ActiveDriverWithLocation } from './interfaces/ActiveDriverWithLocation.interface';
+import { OrderDetailsResponse } from './interfaces/OrderDetailsResponse.interface';
+import { UserTokenDto } from '../user-client/dto/user-token.dto';
 
 @Injectable()
 export class GeoAssignmentService {
@@ -33,6 +44,9 @@ export class GeoAssignmentService {
     @InjectRepository(Route)
     private readonly routeRepo: Repository<Route>,
 
+    private readonly routeService: RouteService,
+    private readonly userClientService: UserClientService,
+    private readonly roleClientService: RoleClientService,
     private readonly segmentService: SegmentService,
     private readonly assignmentService: AssignmentService,
     private readonly locationService: LocationService,
@@ -59,6 +73,112 @@ export class GeoAssignmentService {
       throw new Error('GOOGLE_MAPS_API_KEY no configurada en .env');
     }
     this.googleApiKey = gKey;
+  }
+
+
+  async assignOrderToNearestDriverAndCreateGeoAssignment(
+    orderId: string,
+    token: string,
+  ): Promise<{ assignment: AssignmentResponse, geoAssignment?: GeoAssignment }> {
+    // 1. Obtener Detalles de la Orden
+    const order = await this.getOrderDetails(orderId, token);
+    if (order.status !== 'unassigned') {
+      throw new BadRequestException(
+        `Orden #${orderId} no está en estado 'unassigned' (estado actual: ${order.status}).`,
+      );
+    }
+    const storeId = order.storeId;
+
+    // 2. Obtener Ubicación del Almacén (usando RouteService)
+    const storeDetails = await this.routeService.getStoreDetails(storeId, token);
+    if (typeof storeDetails.latitude !== 'number' || typeof storeDetails.longitude !== 'number') {
+      throw new InternalServerErrorException(
+        `Datos de ubicación para el almacén #${storeId} inválidos o faltantes.`,
+      );
+    }
+    const storeLat = storeDetails.latitude;
+    const storeLng = storeDetails.longitude;
+
+    // 3. Encontrar Repartidores Activos y sus Ubicaciones
+    const allUsers: UserTokenDto[] = await this.userClientService.findAll(token);
+    const activeDrivers: ActiveDriverWithLocation[] = [];
+
+    for (const user of allUsers) {
+      if (user.estado) { // Solo usuarios activos
+        try {
+          const roleInfo = await this.roleClientService.getRoleById(user.role as string, token);
+          if (roleInfo.name === 'DeliveryDriver') {
+            const location = await this.locationService.findLatestByUser(user.id);
+
+            activeDrivers.push({ id: user.id, email: user.email, location });
+          }
+        } catch (e) {
+          console.warn(`Omitiendo usuario ${user.id} por error al verificar rol/ubicación: ${(e as Error).message}`);
+        }
+      }
+    }
+
+    if (activeDrivers.length === 0) {
+      throw new NotFoundException('No se encontraron repartidores activos.');
+    }
+
+    // 4. Calcular Proximidad y Seleccionar Repartidor más Cercano
+    let nearestDriver: ActiveDriverWithLocation | null = null;
+    let shortestDistance = Infinity;
+
+    for (const driver of activeDrivers) {
+      if (driver.location && typeof driver.location.latitude === 'number' && typeof driver.location.longitude === 'number') {
+        const distance = this.calculateHaversine( // Usamos el método existente
+          driver.location.latitude,
+          driver.location.longitude,
+          storeLat,
+          storeLng,
+        );
+        driver.distanceToStore = distance;
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          nearestDriver = driver;
+        }
+      }
+    }
+
+    if (!nearestDriver) {
+      throw new NotFoundException(
+        'No se encontraron repartidores con ubicaciones válidas para calcular proximidad.',
+      );
+    }
+
+    // 5. Crear Asignación en ms-orders (usando AssignmentService)
+    const createAssignmentPayload: CreateAssignmentDto = {
+      orderId: orderId,
+      userDeliveryDriver: nearestDriver.id,
+      status: 'assigned', // O el estado que corresponda
+      note: `Asignado automáticamente al repartidor más cercano: ${nearestDriver.email}. Distancia: ${shortestDistance.toFixed(0)}m.`,
+      date: new Date().toISOString(),
+    };
+
+    console.log(`Creando asignación para la orden ${orderId} con el repartidor ${createAssignmentPayload.orderId}, ${createAssignmentPayload.userDeliveryDriver}, ${createAssignmentPayload.status}, ${createAssignmentPayload.note}, ${createAssignmentPayload.date} (${nearestDriver.email}) a una distancia de ${shortestDistance.toFixed(0)} metros.`);
+
+    const createdAssignment = await this.assignmentService.create(createAssignmentPayload, token);
+
+    // 6. Crear GeoAssignment (usando el método 'create' existente de este servicio)
+    // El método 'create' espera un 'assignmentId' que es el ID de la asignación recién creada.
+    let createdGeoAssignment: GeoAssignment | undefined;
+    if (createdAssignment && createdAssignment.id) {
+      try {
+        // El método 'create' de GeoAssignmentService ya maneja la creación de Route y Segments.
+        createdGeoAssignment = await this.create({ assignmentId: createdAssignment.id }, token);
+      } catch (geoError) {
+        console.error(`Fallo al crear GeoAssignment para la asignación ${createdAssignment.id}:`, geoError);
+        // Considera si este error debe propagarse o solo registrarse.
+        // Por ahora, la asignación principal en ms-orders tuvo éxito.
+      }
+    } else {
+      console.warn(`No se pudo obtener el ID de la asignación creada para la orden ${orderId}. No se creará GeoAssignment.`);
+    }
+
+
+    return { assignment: createdAssignment, geoAssignment: createdGeoAssignment };
   }
 
   /**
@@ -405,5 +525,34 @@ export class GeoAssignmentService {
       Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  }
+
+  // --- Método para obtener detalles de la orden (privado o utilidad) ---
+  private async getOrderDetails(
+    orderId: string,
+    token: string,
+  ): Promise<OrderDetailsResponse> {
+    const url = `${this.ordersBaseUrl}orders/${encodeURIComponent(orderId)}`;
+    console.log(url)
+    try {
+      const response = await firstValueFrom(
+        this.http.get<OrderDetailsResponse>(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 404)
+          throw new NotFoundException(`Orden #${orderId} no encontrada en ms-orders.`);
+        if (status === 401)
+          throw new UnauthorizedException('Token inválido/expirado para ms-orders.');
+      }
+      console.error(`Error obteniendo orden #${orderId}:`, error);
+      throw new InternalServerErrorException(
+        `Fallo al obtener orden #${orderId} desde ms-orders.`,
+      );
+    }
   }
 }

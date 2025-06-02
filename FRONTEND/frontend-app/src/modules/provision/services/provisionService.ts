@@ -3,7 +3,7 @@ import endpoints from "./provisionEndpoints";
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_APP_API_AWS_ENDPOINT_PREFIJO ||
-    "http://localhost:3010/api/v1",
+    "http://localhost:3002/api/v1",
 });
 
 const provisionService = {
