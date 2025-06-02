@@ -11,6 +11,7 @@ import {
   UnauthorizedException,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { GeoAssignmentService } from './geo-assignment.service';
 import { CreateGeoAssignmentDto } from './dto/create-geo-assignment.dto';
@@ -18,25 +19,24 @@ import { UpdateGeoAssignmentDto } from './dto/update-geo-assignment.dto';
 import { GeoAssignment } from './entities/geo-assignment.entity';
 import { AssignmentResponse } from '../assignment/interface/AssignmentResponse.interface';
 
-
 import {
   ApiTags,
-  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('GeoAssignments')
-@ApiBearerAuth() // Solo esto, no es necesario @ApiHeader adicional
 @Controller('geo-assignments')
 export class GeoAssignmentController {
   constructor(private readonly geoService: GeoAssignmentService) { }
 
-
-  // --- NUEVO ENDPOINT PARA ASIGNACIÓN POR PROXIMIDAD ---
   @Post('assignProximity/order/:orderId')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Asignar orden al repartidor más cercano y crear GeoAssignment' })
   @ApiParam({ name: 'orderId', description: 'ID de la Orden (UUID o string)', type: String })
   @ApiResponse({
@@ -49,21 +49,17 @@ export class GeoAssignmentController {
   async assignByProximity(
     @Param('orderId') orderId: string,
     @Headers('authorization') authHeader: string,
-  ): Promise<{ assignment: AssignmentResponse, geoAssignment?: GeoAssignment }> {
+  ): Promise<{ assignment: AssignmentResponse; geoAssignment?: GeoAssignment }> {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Token no provisto o con formato incorrecto.');
     }
-    const token = authHeader.substring(7); // Extrae el token
+    const token = authHeader.substring(7);
     return this.geoService.assignOrderToNearestDriverAndCreateGeoAssignment(orderId, token);
   }
 
-  /**
-   * POST /geo-assignments
-   * - Headers: Authorization: 'Bearer <token>' (para validar el usuario/repartidor en JwtAuthGuard)
-   * - Body: { assignmentId, distanceToPickup, distanceToDrop }
-   * Crea un nuevo GeoAssignment con su Route y sus Segments.
-   */
   @Post()
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Crear nuevo GeoAssignment (directamente si ya existe una asignación)' })
   @ApiBody({ type: CreateGeoAssignmentDto })
   @ApiResponse({
@@ -79,15 +75,11 @@ export class GeoAssignmentController {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Token no provisto o con formato incorrecto');
     }
-    const token = authHeader.substring(7); // Eliminamos "Bearer" 
-    console.log(`Token recibido: ${token}`); // Para depuración, puedes eliminarlo en producción   
+    const token = authHeader.substring(7);
+    console.log(`Token recibido: ${token}`);
     return this.geoService.create(createDto, token);
   }
 
-  /**
-   * GET /geo-assignments
-   * Retorna todos los GeoAssignments (con su Route y Segmentos, gracias a eager: true).
-   */
   @Get()
   @ApiOperation({ summary: 'Listar todos los GeoAssignments' })
   @ApiResponse({
@@ -100,10 +92,6 @@ export class GeoAssignmentController {
     return this.geoService.findAll();
   }
 
-  /**
-   * GET /geo-assignments/:id
-   * Retorna un GeoAssignment específico por su ID.
-   */
   @Get(':id')
   @ApiOperation({ summary: 'Obtener GeoAssignment por ID' })
   @ApiParam({
@@ -118,17 +106,10 @@ export class GeoAssignmentController {
     type: GeoAssignment,
   })
   @ApiResponse({ status: 404, description: 'GeoAssignment no encontrado.' })
-  async findOne(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<GeoAssignment> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<GeoAssignment> {
     return this.geoService.findOne(id);
   }
 
-  /**
-   * PATCH /geo-assignments/:id
-   * Actualiza distanceToPickup y/o distanceToDrop.
-   * Body: { distanceToPickup?, distanceToDrop? }
-   */
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar GeoAssignment (solo distancias)' })
   @ApiParam({
@@ -151,10 +132,6 @@ export class GeoAssignmentController {
     return this.geoService.update(id, updateDto);
   }
 
-  /**
-   * DELETE /geo-assignments/:id
-   * Elimina un GeoAssignment (y en cascada su Route y Segmentos).
-   */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar GeoAssignment por ID' })

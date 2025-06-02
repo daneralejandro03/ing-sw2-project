@@ -1,5 +1,3 @@
-// src/items/items.service.ts
-
 import {
   Injectable,
   BadRequestException,
@@ -36,33 +34,43 @@ export class ItemsService {
     productId: number,
     createItemDto: CreateItemDto,
   ): Promise<Item> {
-    const { name, quantity, unitPrice } = createItemDto;
-    const totalPrice = quantity * unitPrice;
+    const { quantity } = createItemDto;
 
-    // 1. Validar que la orden exista (buscando en la DB local)
+    // 1. Validar orden
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order) {
       throw new BadRequestException(`El orderId "${orderId}" no existe.`);
     }
 
-    // 2. Validar que el producto exista en Inventory Service
+    // 2. Obtener datos del producto desde Inventario
+    let productData: any;
     try {
       const invBase = process.env.INVENTORY_SERVICE_URL.replace(/\/$/, '');
       const prodUrl = `${invBase}/product/${productId}`;
-      await firstValueFrom(this.httpService.get(prodUrl));
+      const resp = await firstValueFrom(this.httpService.get(prodUrl));
+      productData = resp.data;
     } catch (err) {
       const axiosErr = err as AxiosError;
       if (axiosErr.response?.status === 404) {
-        throw new BadRequestException(
-          `El productId "${productId}" no existe en Inventario.`,
-        );
+        throw new BadRequestException(`El productId "${productId}" no existe en Inventario.`);
       }
       throw new BadRequestException(
         `Error validando productId "${productId}" en Inventario.`,
       );
     }
 
-    // 3. Crear la entidad Item y asignar relación con Order
+    // 3. Extraer nombre y precio unitario del producto
+    const name = productData.name;
+    const unitPrice = productData.unitPrice;
+
+    if (!name || unitPrice === undefined || unitPrice === null) {
+      throw new BadRequestException('Datos inválidos del producto recibidos desde Inventario.');
+    }
+
+    // 4. Calcular totalPrice
+    const totalPrice = quantity * unitPrice;
+
+    // 5. Crear entidad Item
     const itemEntity = this.itemRepo.create({
       name,
       quantity,
@@ -72,7 +80,7 @@ export class ItemsService {
       order,
     });
 
-    // 4. Persistir en BD
+    // 6. Guardar en BD
     try {
       return await this.itemRepo.save(itemEntity);
     } catch {
@@ -111,7 +119,7 @@ export class ItemsService {
    */
   async update(
     id: string,
-    updateData: Partial<CreateItemDto>,
+    updateData: Partial<CreateItemDto>, // Solo debe traer quantity
   ): Promise<Item> {
     const existing = await this.itemRepo.findOne({
       where: { id },
@@ -121,14 +129,41 @@ export class ItemsService {
       throw new BadRequestException(`No existe ítem con id "${id}".`);
     }
 
-    // Merge de campos permitidos
-    const merged = this.itemRepo.merge(existing, updateData);
+    // Si llega quantity para actualizar, validar que sea >= 1
+    if (updateData.quantity !== undefined && updateData.quantity < 1) {
+      throw new BadRequestException('La cantidad debe ser al menos 1.');
+    }
 
-    // Recalcular totalPrice si cambian quantity o unitPrice
-    merged.totalPrice = merged.quantity * merged.unitPrice;
+    // Obtener datos actuales del producto desde Inventario para asegurar nombre y precio
+    let productData: any;
+    try {
+      const invBase = process.env.INVENTORY_SERVICE_URL.replace(/\/$/, '');
+      const prodUrl = `${invBase}/product/${existing.productId}`;
+      const resp = await firstValueFrom(this.httpService.get(prodUrl));
+      productData = resp.data;
+    } catch (err) {
+      throw new BadRequestException(
+        `Error obteniendo datos del producto con ID "${existing.productId}" desde Inventario.`,
+      );
+    }
+
+    const name = productData.name;
+    const unitPrice = productData.unitPrice;
+
+    if (!name || unitPrice === undefined || unitPrice === null) {
+      throw new BadRequestException('Datos inválidos del producto recibidos desde Inventario.');
+    }
+
+    // Merge solo quantity (porque name y unitPrice vienen de Inventario)
+    existing.quantity = updateData.quantity ?? existing.quantity;
+    existing.name = name;
+    existing.unitPrice = unitPrice;
+
+    // Recalcular totalPrice
+    existing.totalPrice = existing.quantity * existing.unitPrice;
 
     try {
-      return await this.itemRepo.save(merged);
+      return await this.itemRepo.save(existing);
     } catch {
       throw new InternalServerErrorException('Error al actualizar el ítem.');
     }

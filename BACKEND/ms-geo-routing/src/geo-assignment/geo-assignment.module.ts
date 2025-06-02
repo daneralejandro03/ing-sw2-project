@@ -12,7 +12,7 @@ import { forwardRef } from '@nestjs/common';
 import { LocationModule } from 'src/location/location.module';
 import { UsersModule } from 'src/user-client/user-client.module';
 import { RoleClientModule } from 'src/role-client/role-client.module';
-
+import { AuthModule } from 'src/auth/auth.module';
 @Module({
   controllers: [GeoAssignmentController],
   providers: [GeoAssignmentService, AssignmentService],
@@ -25,6 +25,7 @@ import { RoleClientModule } from 'src/role-client/role-client.module';
     LocationModule,
     UsersModule,
     RoleClientModule,
+    AuthModule,
   ],
   exports: [GeoAssignmentService, TypeOrmModule],
 })

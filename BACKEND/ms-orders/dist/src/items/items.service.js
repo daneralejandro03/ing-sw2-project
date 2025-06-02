@@ -27,16 +27,17 @@ let ItemsService = class ItemsService {
         this.httpService = httpService;
     }
     async create(orderId, productId, createItemDto) {
-        const { name, quantity, unitPrice } = createItemDto;
-        const totalPrice = quantity * unitPrice;
+        const { quantity } = createItemDto;
         const order = await this.orderRepo.findOne({ where: { id: orderId } });
         if (!order) {
             throw new common_1.BadRequestException(`El orderId "${orderId}" no existe.`);
         }
+        let productData;
         try {
             const invBase = process.env.INVENTORY_SERVICE_URL.replace(/\/$/, '');
             const prodUrl = `${invBase}/product/${productId}`;
-            await (0, rxjs_1.firstValueFrom)(this.httpService.get(prodUrl));
+            const resp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(prodUrl));
+            productData = resp.data;
         }
         catch (err) {
             const axiosErr = err;
@@ -45,6 +46,12 @@ let ItemsService = class ItemsService {
             }
             throw new common_1.BadRequestException(`Error validando productId "${productId}" en Inventario.`);
         }
+        const name = productData.name;
+        const unitPrice = productData.unitPrice;
+        if (!name || unitPrice === undefined || unitPrice === null) {
+            throw new common_1.BadRequestException('Datos inválidos del producto recibidos desde Inventario.');
+        }
+        const totalPrice = quantity * unitPrice;
         const itemEntity = this.itemRepo.create({
             name,
             quantity,
@@ -81,10 +88,30 @@ let ItemsService = class ItemsService {
         if (!existing) {
             throw new common_1.BadRequestException(`No existe ítem con id "${id}".`);
         }
-        const merged = this.itemRepo.merge(existing, updateData);
-        merged.totalPrice = merged.quantity * merged.unitPrice;
+        if (updateData.quantity !== undefined && updateData.quantity < 1) {
+            throw new common_1.BadRequestException('La cantidad debe ser al menos 1.');
+        }
+        let productData;
         try {
-            return await this.itemRepo.save(merged);
+            const invBase = process.env.INVENTORY_SERVICE_URL.replace(/\/$/, '');
+            const prodUrl = `${invBase}/product/${existing.productId}`;
+            const resp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(prodUrl));
+            productData = resp.data;
+        }
+        catch (err) {
+            throw new common_1.BadRequestException(`Error obteniendo datos del producto con ID "${existing.productId}" desde Inventario.`);
+        }
+        const name = productData.name;
+        const unitPrice = productData.unitPrice;
+        if (!name || unitPrice === undefined || unitPrice === null) {
+            throw new common_1.BadRequestException('Datos inválidos del producto recibidos desde Inventario.');
+        }
+        existing.quantity = updateData.quantity ?? existing.quantity;
+        existing.name = name;
+        existing.unitPrice = unitPrice;
+        existing.totalPrice = existing.quantity * existing.unitPrice;
+        try {
+            return await this.itemRepo.save(existing);
         }
         catch {
             throw new common_1.InternalServerErrorException('Error al actualizar el ítem.');
