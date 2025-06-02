@@ -28,11 +28,21 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  // 3) Construir configuración de Swagger
+  // 3) Construir configuración de Swagger con esquema Bearer
   const swaggerConfig = new DocumentBuilder()
     .setTitle('MICROSERVICIO DE GEOLOCALIZACIÓN Y RUTAS')
     .setDescription('Microservicio de Geolocalización y Asignación de Rutas')
     .setVersion('1.0')
+    // Aquí agregamos la configuración de Bearer para JWT
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Ingrese “Bearer <token>” para autenticarse',
+      },
+      'JWT-auth', // nombre interno del esquema
+    )
     .addServer(`http://localhost:${port}`, 'Local Dev')
     .build();
 
@@ -47,7 +57,7 @@ async function bootstrap() {
       docExpansion: 'none',
       defaultModelsExpandDepth: -1,
       filter: true,
-      persistAuthorization: true,
+      persistAuthorization: true, // para que no borre el token al recargar
     },
   });
 

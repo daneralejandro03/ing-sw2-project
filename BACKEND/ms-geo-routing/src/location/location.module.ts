@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Location } from './entities/location.entity';
 import { UsersModule } from '../user-client/user-client.module'
 import { RoleClientModule } from 'src/role-client/role-client.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { RoleClientModule } from 'src/role-client/role-client.module';
     HttpModule,
     ConfigModule,
     UsersModule,
-    RoleClientModule
+    RoleClientModule,
+    AuthModule,
   ],
   controllers: [LocationController],
   providers: [LocationService],

@@ -28,25 +28,18 @@ export class ItemsController {
 
   @Post('order/:orderId/product/:productId')
   @ApiOperation({ summary: 'Crear nuevo ítem para una orden' })
-  @ApiParam({
-    name: 'orderId',
-    type: 'string',
-    description: 'ID de la orden Mongo',
-  })
-  @ApiParam({
-    name: 'productId',
-    type: 'number',
-    description: 'ID del producto (entero)',
-  })
+  @ApiParam({ name: 'orderId', type: 'string', description: 'ID de la orden Mongo' })
+  @ApiParam({ name: 'productId', type: 'number', description: 'ID del producto (entero)' })
   @ApiBody({
-    type: CreateItemDto,
-    description: 'Datos del ítem a crear',
+    schema: {
+      type: 'object',
+      properties: {
+        quantity: { type: 'number', minimum: 1, example: 2 },
+      },
+    },
+    description: 'Cantidad del ítem a crear',
   })
-  @ApiResponse({
-    status: 201,
-    description: 'Ítem creado exitosamente.',
-    type: Item,
-  })
+  @ApiResponse({ status: 201, description: 'Ítem creado exitosamente.', type: Item })
   @ApiResponse({ status: 400, description: 'Datos inválidos o recurso no encontrado.' })
   async create(
     @Param('orderId', ParseUUIDPipe) orderId: string,

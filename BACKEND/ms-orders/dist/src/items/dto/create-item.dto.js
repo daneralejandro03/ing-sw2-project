@@ -17,17 +17,6 @@ class CreateItemDto {
 exports.CreateItemDto = CreateItemDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Nombre descriptivo del ítem',
-        maxLength: 255,
-        example: 'Camiseta roja talla M',
-    }),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.MaxLength)(255),
-    __metadata("design:type", String)
-], CreateItemDto.prototype, "name", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
         description: 'Cantidad de unidades de este ítem (entero mínimo 1)',
         minimum: 1,
         example: 2,
@@ -36,14 +25,4 @@ __decorate([
     (0, class_validator_1.Min)(1),
     __metadata("design:type", Number)
 ], CreateItemDto.prototype, "quantity", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: 'Precio unitario del producto (número >= 0)',
-        minimum: 0,
-        example: 25.5,
-    }),
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
-    __metadata("design:type", Number)
-], CreateItemDto.prototype, "unitPrice", void 0);
 //# sourceMappingURL=create-item.dto.js.map

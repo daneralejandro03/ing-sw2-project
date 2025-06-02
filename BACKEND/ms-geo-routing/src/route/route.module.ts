@@ -7,13 +7,15 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { GeoAssignmentModule } from 'src/geo-assignment/geo-assignment.module';
 import { forwardRef } from '@nestjs/common';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Route]),
     HttpModule,
     ConfigModule,
-    forwardRef(() => GeoAssignmentModule)
+    forwardRef(() => GeoAssignmentModule),
+    AuthModule
   ],
   controllers: [RouteController],
   providers: [RouteService],

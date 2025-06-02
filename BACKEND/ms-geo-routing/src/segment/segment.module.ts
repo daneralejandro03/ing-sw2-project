@@ -6,6 +6,7 @@ import { Segment } from './entities/segment.entity';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { RouteModule } from 'src/route/route.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { RouteModule } from 'src/route/route.module';
     HttpModule,
     ConfigModule,
     RouteModule,
+    AuthModule,
   ],
   controllers: [SegmentController],
   providers: [SegmentService],

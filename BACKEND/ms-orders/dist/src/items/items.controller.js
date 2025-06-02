@@ -42,25 +42,18 @@ exports.ItemsController = ItemsController;
 __decorate([
     (0, common_1.Post)('order/:orderId/product/:productId'),
     (0, swagger_1.ApiOperation)({ summary: 'Crear nuevo ítem para una orden' }),
-    (0, swagger_1.ApiParam)({
-        name: 'orderId',
-        type: 'string',
-        description: 'ID de la orden Mongo',
-    }),
-    (0, swagger_1.ApiParam)({
-        name: 'productId',
-        type: 'number',
-        description: 'ID del producto (entero)',
-    }),
+    (0, swagger_1.ApiParam)({ name: 'orderId', type: 'string', description: 'ID de la orden Mongo' }),
+    (0, swagger_1.ApiParam)({ name: 'productId', type: 'number', description: 'ID del producto (entero)' }),
     (0, swagger_1.ApiBody)({
-        type: create_item_dto_1.CreateItemDto,
-        description: 'Datos del ítem a crear',
+        schema: {
+            type: 'object',
+            properties: {
+                quantity: { type: 'number', minimum: 1, example: 2 },
+            },
+        },
+        description: 'Cantidad del ítem a crear',
     }),
-    (0, swagger_1.ApiResponse)({
-        status: 201,
-        description: 'Ítem creado exitosamente.',
-        type: item_entity_1.Item,
-    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Ítem creado exitosamente.', type: item_entity_1.Item }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos o recurso no encontrado.' }),
     __param(0, (0, common_1.Param)('orderId', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Param)('productId', common_1.ParseIntPipe)),
