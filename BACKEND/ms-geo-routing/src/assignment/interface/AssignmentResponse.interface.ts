@@ -3,6 +3,6 @@ export interface AssignmentResponse {
     date: string;
     status: string;
     note?: string;
-    userDeliveryUser: string;
+    userDeliveryDriver: string;
     orderId: string;
 }

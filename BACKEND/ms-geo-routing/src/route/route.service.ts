@@ -18,6 +18,7 @@ import { UpdateRouteDto } from './dto/update-route.dto';
 import { Route } from './entities/route.entity';
 import { ConfigService } from '@nestjs/config';
 import { GeoAssignmentService } from '../geo-assignment/geo-assignment.service';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class RouteService {
@@ -31,6 +32,7 @@ export class RouteService {
     private readonly http: HttpService,
     private readonly config: ConfigService,
 
+    @Inject(forwardRef(() => GeoAssignmentService))
     private readonly geoAssignmentService: GeoAssignmentService, // para validar existencia
   ) {
     // URL base de ms-Inventory

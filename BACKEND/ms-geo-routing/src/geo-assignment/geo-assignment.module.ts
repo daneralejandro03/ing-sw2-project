@@ -10,6 +10,8 @@ import { HttpModule } from '@nestjs/axios';
 import { AssignmentService } from 'src/assignment/assignment.service';
 import { forwardRef } from '@nestjs/common';
 import { LocationModule } from 'src/location/location.module';
+import { UsersModule } from 'src/user-client/user-client.module';
+import { RoleClientModule } from 'src/role-client/role-client.module';
 
 @Module({
   controllers: [GeoAssignmentController],
@@ -20,7 +22,9 @@ import { LocationModule } from 'src/location/location.module';
     SegmentModule,
     AssignmentModule,
     HttpModule,
-    LocationModule
+    LocationModule,
+    UsersModule,
+    RoleClientModule,
   ],
   exports: [GeoAssignmentService, TypeOrmModule],
 })

@@ -24,7 +24,7 @@ async function bootstrap() {
     .setDescription('En este microservicio esta toda la logica del negocio de inventario')
     .setVersion('1.0')
     .addBearerAuth()
-    .addServer('http://localhost:3010', 'Local Dev')
+    .addServer('http://localhost:3002', 'Local Dev')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
