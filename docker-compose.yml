@@ -1,6 +1,3 @@
-# Puedes quitar la línea 'version: "3.8"' si lo deseas, ya no es estrictamente necesaria.
-# version: "3.8"
-
 services:
   ms-notifications:
     build: ./BACKEND/ms-notifications
