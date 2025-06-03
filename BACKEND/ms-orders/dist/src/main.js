@@ -11,18 +11,22 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
         transform: true,
     }));
-    app.setGlobalPrefix('api/v1');
+    app.enableCors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    });
+    app.setGlobalPrefix("api/v1");
     const config = new swagger_1.DocumentBuilder()
-        .setTitle('MICROSERVICIO DE PEDIDOS')
-        .setDescription('En este microservicio esta toda la logica del negocio de pedidos')
-        .setVersion('1.0')
+        .setTitle("MICROSERVICIO DE PEDIDOS")
+        .setDescription("En este microservicio esta toda la logica del negocio de pedidos")
+        .setVersion("1.0")
         .addBearerAuth()
-        .addServer('http://localhost:3003', 'Local Dev')
+        .addServer("http://localhost:3003", "Local Dev")
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
-    swagger_1.SwaggerModule.setup('api/v1/api-docs', app, document, {
+    swagger_1.SwaggerModule.setup("api/v1/api-docs", app, document, {
         swaggerOptions: {
-            docExpansion: 'none',
+            docExpansion: "none",
             defaultModelsExpandDepth: -1,
             filter: true,
             persistAuthorization: true,

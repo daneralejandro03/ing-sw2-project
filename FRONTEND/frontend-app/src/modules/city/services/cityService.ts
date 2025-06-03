@@ -58,6 +58,17 @@ const cityService = {
     });
     return data;
   },
+
+  async listCitiesByDepto(idDept: string){
+    const token = localStorage.getItem("token");
+    const { data } = await api.get(endpoints.listByDepto(idDept), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+  
   
 };
 

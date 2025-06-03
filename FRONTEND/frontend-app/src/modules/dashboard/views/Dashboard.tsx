@@ -187,6 +187,28 @@ const Sidebar = ({
         </button>
       </>
     )}
+    {role === "DeliveryDriver" || role === "Administrator" && (
+      <>
+        <button
+          onClick={() => goTo("/dashboard/orders")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Pedidos
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/items")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Items
+        </button>
+        <button
+          onClick={() => goTo("/dashboard/assignments")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+        >
+          Asignaciones
+        </button>
+      </>
+    )}
   </>
 );
 
