@@ -27,7 +27,7 @@ COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/dist ./dist
 
 # Exponer el puerto en el que corre la aplicación (según tu .env)
-EXPOSE 3002
+EXPOSE 3004
 
 # Comando para correr la aplicación
 CMD ["node", "dist/main"]

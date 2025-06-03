@@ -3,12 +3,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # node_modules en TODOS los servicios
-**/node_modules/                    # Node.js dependencies :contentReference[oaicite:3]{index=3}
+**/node_modules/                   
 
 # Salidas de build
-**/dist/                            # NestJS / Vite outputs :contentReference[oaicite:4]{index=4}
-**/build/                           # CRA build output :contentReference[oaicite:5]{index=5}
-frontend/dist/                      # Vite (si usas Vite en frontend)
+**/dist/                            
+**/build/                           
+frontend/dist/                      
 
 # Cobertura de tests
 coverage/
