@@ -3,14 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../redux/authSlice";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Menu, X, User } from "lucide-react";
+import DeliveryTracking from "../../../components/DeliveryTracking";
 
 const DashboardLayout: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-
-const role = useSelector((state: any) => state.auth.role);
+  const userId = useSelector((state: any) => state.auth.userId);
+  const role = localStorage.getItem("role");
 
   const handleLogout = () => {
     dispatch(logout());
@@ -28,6 +28,11 @@ const role = useSelector((state: any) => state.auth.role);
 
   return (
     <div className="min-h-screen w-screen flex flex-col bg-gray-100">
+      {/* Activa rastreo SOLO si es Delivery */}
+      {role === "DeliveryDriver" && userId && (
+        <DeliveryTracking userId={userId} />
+      )}
+
       {/* Navbar */}
       <header className="w-full bg-white shadow-md px-6 py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
@@ -187,8 +192,30 @@ const Sidebar = ({
         </button>
       </>
     )}
+    {role === "DeliveryDriver" ||
+      (role === "Administrator" && (
+        <>
+          <button
+            onClick={() => goTo("/dashboard/orders")}
+            className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+          >
+            Pedidos
+          </button>
+          <button
+            onClick={() => goTo("/dashboard/items")}
+            className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+          >
+            Items
+          </button>
+          <button
+            onClick={() => goTo("/dashboard/assignments")}
+            className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded"
+          >
+            Asignaciones
+          </button>
+        </>
+      ))}
   </>
 );
-
 
 export default DashboardLayout;

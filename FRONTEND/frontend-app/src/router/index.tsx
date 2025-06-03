@@ -6,6 +6,7 @@ import homeRoutes from '../modules/home/routes';
 import userRoutes from '../modules/user/routes';
 import dasboardRoutes from '../modules/dashboard/routes';
 import accessRoutes from '../modules/access/routes';
+import orderRoutes from '../modules/order/routes';
 
 const allRoutes = [
   ...authRoutes,
@@ -13,6 +14,7 @@ const allRoutes = [
   ...userRoutes,
   ...dasboardRoutes,
   ...accessRoutes,
+  ...orderRoutes,
 ];
 
 export function AppRoutes() {

@@ -14,6 +14,9 @@ const SupplierPage = lazy(() => import("../supplier/views/SupplierPage"));
 const ProductPage = lazy(() => import("../product/views/ProductPage"));
 const ProvisionPage = lazy(() => import("../provision/views/ProvisionPage"));
 const InventoryPage = lazy(() => import("../inventory/views/InventoryPage"));
+const OrderPage = lazy(() => import("../order/views/OrderPage"));
+const ItemPage = lazy(() => import("../item/views/ItemPage"));
+const AssignmentPage = lazy(() => import("../assignment/views/AssignmentPage"));
 
 const dashboardRoutes = [
   {
@@ -125,6 +128,30 @@ const dashboardRoutes = [
         element: (
           <Suspense fallback={<div>Loading inventories...</div>}>
             <InventoryPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "orders",
+        element: (
+          <Suspense fallback={<div>Loading orders...</div>}>
+            <OrderPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "items",
+        element: (
+          <Suspense fallback={<div>Loading items...</div>}>
+            <ItemPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "assignments",
+        element: (
+          <Suspense fallback={<div>Loading assignments...</div>}>
+            <AssignmentPage />
           </Suspense>
         ),
       },

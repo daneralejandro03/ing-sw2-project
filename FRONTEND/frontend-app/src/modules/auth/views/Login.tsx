@@ -39,11 +39,12 @@ const Login: React.FC = () => {
       if (!token) {
         return;
       }
-      const decoded = jwtDecode(token) as { role: string };
+      const decoded = jwtDecode(token) as { role: string, id: string };
       const rol = await rolesService.getById(decoded.role);
+      const userId = decoded.id;
       localStorage.setItem("role", rol.name);
 
-      dispatch(loginSuccess({ token, rol: rol.name }));
+      dispatch(loginSuccess({ token, rol: rol.name, userId: userId }));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al iniciar sesión");
     } finally {
