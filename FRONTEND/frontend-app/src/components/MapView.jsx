@@ -20,7 +20,7 @@ export default function MapView({ driverPos, storePos, dropPos }) {
   const [directions, setDirections] = useState(null);
 
   useEffect(() => {
-  if (!isLoaded) return;      // <-- Espera a que la API esté lista
+  if (!isLoaded) return;  
   if (!driverPos || !storePos) return;
 
   const directionsService = new window.google.maps.DirectionsService();
@@ -39,7 +39,7 @@ export default function MapView({ driverPos, storePos, dropPos }) {
       }
     }
   );
-}, [driverPos, storePos, isLoaded]);  // Agrega isLoaded en las dependencias
+}, [driverPos, storePos, isLoaded]);
 
 
   if (loadError) return <div>Error loading maps</div>;
@@ -53,7 +53,6 @@ export default function MapView({ driverPos, storePos, dropPos }) {
     >
       {storePos && <Marker position={storePos} label="Tienda" />}
       {driverPos && <Marker position={driverPos} label="Conductor" />}
-      {dropPos && <Marker position={dropPos} label="Destino" />}
 
       {directions && <DirectionsRenderer directions={directions} />}
     </GoogleMap>
