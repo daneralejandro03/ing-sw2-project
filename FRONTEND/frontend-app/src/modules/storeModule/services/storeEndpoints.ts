@@ -5,5 +5,6 @@ export default {
   //listUsersByStore: (idDept: string) => `${STORE_BASE}//${idDept}`,          
   list: `${STORE_BASE}`,    
   delete: (id: string) => `${STORE_BASE}/${id}`,
-  update: (id: string) => `${STORE_BASE}/${id}`
+  update: (id: string) => `${STORE_BASE}/${id}`,
+  get: (id: string) => `${STORE_BASE}/${id}`
 };

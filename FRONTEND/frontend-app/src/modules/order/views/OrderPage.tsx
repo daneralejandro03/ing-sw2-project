@@ -13,16 +13,21 @@ import {
   Divider,
   Typography,
 } from "antd";
-import { Trash2, Edit, Plus } from "lucide-react";
+import { Trash2, Edit, Plus, MapPin } from "lucide-react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+
 import orderService from "../services/orderService";
+import assignmentService from "../../assignment/services/assignmentService";
 import storeService from "../../storeModule/services/storeService";
 import departmentService from "../../departament/services/departmentService";
 import cityService from "../../city/services/cityService";
+import locationService from "../../location/services/locationService";
 import geoAssignmentService from "../../geoAssignment/services/geoAssignmentService";
-import Swal from "sweetalert2";
+
 import type { Order } from "../types/Order";
 import type { RootState } from "../../../redux/store";
-import { useSelector } from "react-redux";
 
 const { Option } = Select;
 const { Title } = Typography;
@@ -33,11 +38,14 @@ interface FullOrder extends Order {
   userGuest: { id: string; name: string };
   department: string;
   city: string;
+  userDeliveryDriver?: string;
 }
 
 const OrderPage: React.FC = () => {
   const [orders, setOrders] = useState<FullOrder[]>([]);
-  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const [stores, setStores] = useState<
+    { id: string; name: string; lat: number; lng: number }[]
+  >([]);
   const [departments, setDepartments] = useState<
     { id: string; name: string }[]
   >([]);
@@ -45,15 +53,11 @@ const OrderPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<FullOrder | null>(null);
-      const userId = useSelector((state: RootState) => state.auth.userId);
 
-
+  const userId = useSelector((state: RootState) => state.auth.userId)!;
+  const navigate = useNavigate();
   const [form] = Form.useForm<
-    Order & {
-      storeId: string;
-      departmentId: string;
-      cityId: string;
-    }
+    Order & { storeId: string; departmentId: string; cityId: string }
   >();
 
   useEffect(() => {
@@ -61,29 +65,43 @@ const OrderPage: React.FC = () => {
     loadDepartments();
   }, []);
 
+  /** Carga órdenes + stores + assignments para añadir userDeliveryDriver */
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [ord, sts] = await Promise.all([
+      const [ord, sts, assignments] = await Promise.all([
         orderService.list(),
         storeService.list(),
+        assignmentService.list(),
       ]);
-
+      // Mapa de stores para lookup
       const storesMap = new Map(sts.map((s: any) => [s.id, s.name]));
 
-      const ordersTransformed: FullOrder[] = ord.map((order: any) => ({
-        ...order,
-        store: {
-          id: order.storeId?.toString() || "",
-          name: storesMap.get(order.storeId) || "Desconocida",
-        },
+      const combined: FullOrder[] = ord.map((order: any) => {
+        // Busco la asignación para esta orden
+        const assign = assignments.find((a: any) => a.order?.id === order.id);
+        return {
+          ...order,
+          id: order.id,
+          store: {
+            id: String(order.storeId),
+            name: storesMap.get(order.storeId) || "Desconocida",
+          },
+          department: order.department || "",
+          city: order.city || "",
+          userDeliveryDriver: assign?.userDeliveryDriver,
+        };
+      });
 
-        department: order.department || "",
-        city: order.city || "",
-      }));
-
-      setOrders(ordersTransformed);
-      setStores(sts.map((s: any) => ({ id: s.id, name: s.name })));
+      setOrders(combined);
+      setStores(
+        sts.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          lat: s.lat,
+          lng: s.lng,
+        }))
+      );
     } finally {
       setLoading(false);
     }
@@ -109,62 +127,60 @@ const OrderPage: React.FC = () => {
     form.setFieldsValue({
       ...record,
       storeId: record.store.id,
+      departmentId: departments.find((d) => d.name === record.department)?.id,
+      cityId: cities.find((c) => c.name === record.city)?.id,
     });
-    // preseleccionar departamento y cargar sus ciudades
-    const dept = departments.find((d) => d.name === record.department);
-    if (dept) {
-      form.setFieldsValue({ departmentId: dept.id });
-      await onDeptChange(dept.id);
-      const cityObj = cities.find((c) => c.name === record.city);
-      if (cityObj) form.setFieldsValue({ cityId: cityObj.id });
-    }
     setModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
+    const r = await Swal.fire({
       title: "¿Eliminar orden?",
       text: "Esta acción no se puede deshacer.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Eliminar",
-      cancelButtonText: "Cancelar",
     });
-    if (!result.isConfirmed) return;
+    if (!r.isConfirmed) return;
     try {
       await orderService.delete(id);
-      Swal.fire("Eliminada", "La orden ha sido eliminada.", "success");
+      Swal.fire("Eliminada", "", "success");
       loadAll();
     } catch {
-      Swal.fire("Error", "No se pudo eliminar la orden.", "error");
+      Swal.fire("Error borrando", "", "error");
     }
   };
 
   const handleFinish = async (values: any) => {
+    // Aquí SÍ validamos que venga storeId
     const { storeId, departmentId, cityId, ...orderData } = values;
+    if (!storeId) {
+      return Swal.fire("Error", "Debes seleccionar una tienda", "error");
+    }
     const departmentName = departments.find((d) => d.id === departmentId)?.name;
     const cityName = cities.find((c) => c.id === cityId)?.name;
-
     const payload = {
       ...orderData,
       department: departmentName,
       city: cityName,
     };
+
     try {
       if (editOrder) {
         await orderService.update(payload, editOrder.id);
-        Swal.fire("Actualizada", "La orden ha sido actualizada.", "success");
+        Swal.fire("Actualizada", "", "success");
       } else {
+        // Aquí ya tenemos storeId
         const response = await orderService.create(payload, userId, storeId);
-        geoAssignmentService.createAndAsign(response.id);
-        Swal.fire("Creada", "La orden ha sido creada.", "success");
+        await geoAssignmentService.createAndAsign(response.id);
+        Swal.fire("Creada", "", "success");
       }
       setModalOpen(false);
       setEditOrder(null);
       loadAll();
       form.resetFields();
     } catch {
-      Swal.fire("Error", "No se pudo guardar la orden.", "error");
+      Swal.fire("Error guardando", "", "error");
     }
   };
 
@@ -174,6 +190,12 @@ const OrderPage: React.FC = () => {
     { title: "Estado", dataIndex: "status", key: "status" },
     { title: "Monto", dataIndex: "totalAmount", key: "totalAmount" },
     { title: "Pago", dataIndex: "paymentStatus", key: "paymentStatus" },
+    {
+      title: "Repartidor ID",
+      dataIndex: "userDeliveryDriver",
+      key: "driver",
+      render: (id: string) => id || "—",
+    },
     {
       title: "Acciones",
       key: "actions",
@@ -190,6 +212,24 @@ const OrderPage: React.FC = () => {
             icon={<Trash2 />}
             onClick={() => handleDelete(rec.id)}
           />
+          <Button
+            type="link"
+            icon={<MapPin />}
+            onClick={() =>
+              navigate(`/order/${rec.id}/track`, {
+                state: {
+                  driverId: rec.userDeliveryDriver,
+                  storeId: rec.store.id, // Aquí pasas el id directo
+                  storePos: {
+                    lat: stores.find((s) => s.id === rec.store.id)?.lat,
+                    lng: stores.find((s) => s.id === rec.store.id)?.lng,
+                  },
+                },
+              })
+            }
+          >
+            Ver Ruta
+          </Button>
         </Space>
       ),
     },
@@ -198,7 +238,6 @@ const OrderPage: React.FC = () => {
   return (
     <div className="p-6">
       <Title level={3}>Gestión de Órdenes</Title>
-
       <Space className="mb-4">
         <Button
           type="primary"
@@ -212,8 +251,8 @@ const OrderPage: React.FC = () => {
           Nueva Orden
         </Button>
       </Space>
-
       <Divider orientation="left">Todas las Órdenes</Divider>
+
       <Table
         rowKey="id"
         dataSource={orders}
@@ -236,13 +275,24 @@ const OrderPage: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleFinish}>
           <Row gutter={16}>
+            {/* Columna izquierda */}
             <Col span={12}>
               <Form.Item
                 name="storeId"
                 label="Tienda"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Selecciona una tienda" }]}
               >
-                <Select placeholder="Selecciona tienda">
+                <Select
+                  showSearch
+                  optionFilterProp="children"
+                  placeholder="Selecciona tienda"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  allowClear
+                >
                   {stores.map((s) => (
                     <Option key={s.id} value={s.id}>
                       {s.name}
@@ -252,13 +302,13 @@ const OrderPage: React.FC = () => {
               </Form.Item>
 
               <Form.Item
-                name="departmentId"
                 label="Departamento"
+                name="departmentId"
                 rules={[{ required: true }]}
               >
                 <Select
-                  placeholder="Selecciona departamento"
                   onChange={onDeptChange}
+                  placeholder="Selecciona departamento"
                 >
                   {departments.map((d) => (
                     <Option key={d.id} value={d.id}>
@@ -269,11 +319,11 @@ const OrderPage: React.FC = () => {
               </Form.Item>
 
               <Form.Item
-                name="cityId"
                 label="Ciudad"
+                name="cityId"
                 rules={[{ required: true }]}
               >
-                <Select placeholder="Selecciona ciudad">
+                <Select placeholder="Selecciona ciudad" allowClear>
                   {cities.map((c) => (
                     <Option key={c.id} value={c.id}>
                       {c.name}
@@ -281,87 +331,34 @@ const OrderPage: React.FC = () => {
                   ))}
                 </Select>
               </Form.Item>
-
-              <Form.Item
-                name="status"
-                label="Estado"
-                rules={[{ required: true }]}
-              >
-                <Select placeholder="Selecciona estado">
-                  <Option value="attempted">Attempted</Option>
-                  <Option value="assigned">Assigned</Option>
-                  <Option value="rejected">Rejected</Option>
-                  <Option value="unassigned">Unassigned</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="totalAmount"
-                label="Monto Total"
-                rules={[{ required: true }]}
-              >
-                <InputNumber style={{ width: "100%" }} />
-              </Form.Item>
             </Col>
 
+            {/* Columna derecha */}
             <Col span={12}>
+              {/* Otros campos según tu modelo Order */}
               <Form.Item
-                name="currency"
-                label="Moneda"
+                label="Estado"
+                name="status"
                 rules={[{ required: true }]}
               >
                 <Input />
               </Form.Item>
-
               <Form.Item
-                name="paymentMethod"
-                label="Método de Pago"
+                label="Monto"
+                name="totalAmount"
                 rules={[{ required: true }]}
               >
-                <Select placeholder="Método de pago">
-                  <Option value="credit_card">Tarjeta</Option>
-                  <Option value="cash">Efectivo</Option>
-                </Select>
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
-
               <Form.Item
+                label="Estado de pago"
                 name="paymentStatus"
-                label="Estado de Pago"
                 rules={[{ required: true }]}
               >
-                <Select placeholder="Estado de pago">
-                  <Option value="pending">Pending</Option>
-                  <Option value="paid">Paid</Option>
-                  <Option value="failed">Failed</Option>
-                  <Option value="refunded">Refunded</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="address1"
-                label="Dirección 1"
-                rules={[{ required: true }]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="address2" label="Dirección 2">
                 <Input />
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item
-            name="postalCode"
-            label="Código Postal"
-            rules={[{ required: true }]}
-          >
-            <InputNumber style={{ width: "100%" }} />
-          </Form.Item>
-
-          <Form.Item name="instructions" label="Instrucciones">
-            <Input.TextArea rows={3} />
-          </Form.Item>
         </Form>
       </Modal>
     </div>
