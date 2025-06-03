@@ -23,7 +23,6 @@ import assignmentService from "../../assignment/services/assignmentService";
 import storeService from "../../storeModule/services/storeService";
 import departmentService from "../../departament/services/departmentService";
 import cityService from "../../city/services/cityService";
-import locationService from "../../location/services/locationService";
 import geoAssignmentService from "../../geoAssignment/services/geoAssignmentService";
 
 import type { Order } from "../types/Order";
@@ -152,7 +151,6 @@ const OrderPage: React.FC = () => {
   };
 
   const handleFinish = async (values: any) => {
-    // Aquí SÍ validamos que venga storeId
     const { storeId, departmentId, cityId, ...orderData } = values;
     if (!storeId) {
       return Swal.fire("Error", "Debes seleccionar una tienda", "error");
@@ -166,11 +164,11 @@ const OrderPage: React.FC = () => {
     };
 
     try {
+      setLoading(true);
       if (editOrder) {
         await orderService.update(payload, editOrder.id);
         Swal.fire("Actualizada", "", "success");
       } else {
-        // Aquí ya tenemos storeId
         const response = await orderService.create(payload, userId, storeId);
         await geoAssignmentService.createAndAsign(response.id);
         Swal.fire("Creada", "", "success");
@@ -181,6 +179,8 @@ const OrderPage: React.FC = () => {
       form.resetFields();
     } catch {
       Swal.fire("Error guardando", "", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -270,8 +270,8 @@ const OrderPage: React.FC = () => {
           setEditOrder(null);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
         width={800}
+        footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleFinish}>
           <Row gutter={16}>
@@ -331,18 +331,43 @@ const OrderPage: React.FC = () => {
                   ))}
                 </Select>
               </Form.Item>
+
+              <Form.Item
+                label="Dirección 1"
+                name="address1"
+                rules={[{ required: true }]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item label="Dirección 2" name="address2">
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                label="Código Postal"
+                name="postalCode"
+                rules={[{ required: true }]}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
             </Col>
 
             {/* Columna derecha */}
             <Col span={12}>
-              {/* Otros campos según tu modelo Order */}
               <Form.Item
                 label="Estado"
                 name="status"
                 rules={[{ required: true }]}
               >
-                <Input />
+                <Select placeholder="Selecciona estado">
+                  <Option value="attempted">Attempted</Option>
+                  <Option value="assigned">Assigned</Option>
+                  <Option value="rejected">Rejected</Option>
+                  <Option value="unassigned">Unassigned</Option>
+                </Select>
               </Form.Item>
+
               <Form.Item
                 label="Monto"
                 name="totalAmount"
@@ -350,15 +375,77 @@ const OrderPage: React.FC = () => {
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
+
+              <Form.Item
+                label="Moneda"
+                name="currency"
+                rules={[{ required: true }]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                label="Método de pago"
+                name="paymentMethod"
+                rules={[{ required: true }]}
+              >
+                <Select placeholder="Selecciona método de pago">
+                  <Option value="credit_card">Tarjeta de crédito</Option>
+                  <Option value="cash">Efectivo</Option>
+                </Select>
+              </Form.Item>
+
               <Form.Item
                 label="Estado de pago"
                 name="paymentStatus"
                 rules={[{ required: true }]}
               >
-                <Input />
+                <Select placeholder="Selecciona estado de pago">
+                  <Option value="pending">Pendiente</Option>
+                  <Option value="paid">Pagado</Option>
+                  <Option value="failed">Fallido</Option>
+                  <Option value="refunded">Reembolsado</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item label="Instrucciones" name="instructions">
+                <Input.TextArea rows={3} />
               </Form.Item>
             </Col>
           </Row>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              marginTop: 16,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setModalOpen(false);
+                setEditOrder(null);
+                form.resetFields();
+              }}
+              className="py-2 px-4 rounded border border-gray-300 hover:bg-gray-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`py-2 px-6 rounded text-white transition duration-200
+                ${
+                  loading
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }
+              `}
+                    >
+              {loading ? "Guardando..." : "Guardar Orden"}
+            </button>
+          </div>
         </Form>
       </Modal>
     </div>
