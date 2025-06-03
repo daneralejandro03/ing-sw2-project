@@ -1,0 +1,103 @@
+# Puedes quitar la línea 'version: "3.8"' si lo deseas, ya no es estrictamente necesaria.
+# version: "3.8"
+
+services:
+  ms-notifications:
+    build: ./BACKEND/ms-notifications
+    ports:
+      - "${MS_NOTIFICATIONS_PORT:-3000}:${MS_NOTIFICATIONS_PORT:-3000}" # Usa la variable o un default
+    environment:
+      PORT: ${MS_NOTIFICATIONS_PORT:-3000}
+      EMAIL_CONNECTION_STRING: "${MS_NOTIFICATIONS_EMAIL_CONNECTION_STRING}"
+      EMAIL_SENDER_ADDRESS: "${MS_NOTIFICATIONS_EMAIL_SENDER_ADDRESS}"
+      TWILIO_SID: "${MS_NOTIFICATIONS_TWILIO_SID}"
+      TWILIO_AUTH_TOKEN: "${MS_NOTIFICATIONS_TWILIO_AUTH_TOKEN}"
+      TWILIO_FROM: "${MS_NOTIFICATIONS_TWILIO_FROM}"
+      NODE_ENV: "${MS_NOTIFICATIONS_NODE_ENV:-development}"
+    networks:
+      - app-network
+
+  ms-security:
+    build: ./BACKEND/ms-security
+    ports:
+      - "${MS_SECURITY_PORT:-3001}:${MS_SECURITY_PORT:-3001}"
+    environment:
+      MONGODB_URI: "${MS_SECURITY_MONGODB_URI}"
+      PORT: ${MS_SECURITY_PORT:-3001}
+      JWT_SECRET: "${MS_SECURITY_JWT_SECRET}"
+      NOTIFICATION_API_URL: "http://ms-notifications:${MS_NOTIFICATIONS_PORT:-3000}/api/v1" # Referencia al puerto de ms-notifications
+    depends_on:
+      - ms-notifications
+    networks:
+      - app-network
+
+  ms-inventory:
+    build: ./BACKEND/ms-inventory
+    ports:
+      - "${MS_INVENTORY_PORT:-3002}:${MS_INVENTORY_PORT:-3002}"
+    environment:
+      DB_HOST: "${MS_INVENTORY_DB_HOST:-host.docker.internal}"
+      DB_PORT: "${MS_INVENTORY_DB_PORT:-3306}"
+      DB_USERNAME: "${MS_INVENTORY_DB_USERNAME}"
+      DB_PASSWORD: "${MS_INVENTORY_DB_PASSWORD}"
+      DB_NAME: "${MS_INVENTORY_DB_NAME}"
+      JWT_SECRET: "${MS_INVENTORY_JWT_SECRET}"
+      PORT: "${MS_INVENTORY_PORT:-3002}"
+      NOTIFICATION_API_URL: "http://ms-notifications:${MS_NOTIFICATIONS_PORT:-3000}/api/v1"
+      SECURITY_SERVICE_URL: "http://ms-security:${MS_SECURITY_PORT:-3001}/api/v1"
+    depends_on:
+      - ms-notifications
+      - ms-security
+    networks:
+      - app-network
+
+  ms-orders:
+    build: ./BACKEND/ms-orders
+    ports:
+      - "${MS_ORDERS_PORT:-3003}:${MS_ORDERS_PORT:-3003}"
+    environment:
+      DB_HOST: "${MS_ORDERS_DB_HOST:-host.docker.internal}"
+      DB_PORT: "${MS_ORDERS_DB_PORT:-3306}"
+      DB_USERNAME: "${MS_ORDERS_DB_USERNAME}"
+      DB_PASSWORD: "${MS_ORDERS_DB_PASSWORD}"
+      DB_NAME: "${MS_ORDERS_DB_NAME}"
+      JWT_SECRET: "${MS_ORDERS_JWT_SECRET}"
+      PORT: "${MS_ORDERS_PORT:-3003}"
+      NOTIFICATION_API_URL: "http://ms-notifications:${MS_NOTIFICATIONS_PORT:-3000}/api/v1"
+      SECURITY_SERVICE_URL: "http://ms-security:${MS_SECURITY_PORT:-3001}/api/v1"
+      INVENTORY_SERVICE_URL: "http://ms-inventory:${MS_INVENTORY_PORT:-3002}/api/v1"
+    depends_on:
+      - ms-notifications
+      - ms-security
+      - ms-inventory
+    networks:
+      - app-network
+
+  ms-geo-routing:
+    build: ./BACKEND/ms-geo-routing
+    ports:
+      - "${MS_GEO_ROUTING_PORT:-3004}:${MS_GEO_ROUTING_PORT:-3004}"
+    environment:
+      PORT: ${MS_GEO_ROUTING_PORT:-3004}
+      DB_HOST: "${MS_GEO_ROUTING_DB_HOST:-host.docker.internal}"
+      DB_PORT: "${MS_GEO_ROUTING_DB_PORT:-3306}"
+      DB_USERNAME: "${MS_GEO_ROUTING_DB_USERNAME}"
+      DB_PASSWORD: "${MS_GEO_ROUTING_DB_PASSWORD}"
+      DB_NAME: "${MS_GEO_ROUTING_DB_NAME}"
+      JWT_SECRET: "${MS_GEO_ROUTING_JWT_SECRET}"
+      MS_ORDERS_URL: "http://ms-orders:${MS_ORDERS_PORT:-3003}/api/v1"
+      MS_INVENTORY_URL: "http://ms-inventory:${MS_INVENTORY_PORT:-3002}/api/v1"
+      MS_SECURITY_URL: "http://ms-security:${MS_SECURITY_PORT:-3001}/api/v1"
+      MS_NOTIFICATIONS_URL: "http://ms-notifications:${MS_NOTIFICATIONS_PORT:-3000}/api/v1"
+      GOOGLE_MAPS_API_KEY: "${MS_GEO_ROUTING_GOOGLE_MAPS_API_KEY}"
+    depends_on:
+      - ms-notifications
+      - ms-security
+      - ms-inventory
+      - ms-orders
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

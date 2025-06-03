@@ -1,5 +1,53 @@
+# Archivos y directorios generados por Node.js/npm/yarn
 node_modules
-npm-debug.log
-Dockerfile
-docker-compose.yml
-.idea
+npm-debug.log*
+yarn-error.log*
+yarn.lock # Si usas npm y tienes package-lock.json, o viceversa. En tu caso, parece que usas package-lock.json.
+
+# Directorios de salida de compilación (para NestJS)
+dist
+
+# Archivos de entorno local (se manejan por docker-compose.yml)
+.env
+.env.*
+!.env.example # Si quieres incluir un ejemplo de .env en tu repo, pero no en la imagen.
+
+# Archivos de log
+logs
+*.log
+*.pid
+*.seed
+*.out
+
+# Archivos y directorios de IDEs
+.idea/
+.vscode/
+*.iml
+*.project
+*.classpath
+*.DS_Store
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Archivos de Docker
+Dockerfile # No necesitas copiar el Dockerfile dentro de sí mismo
+.dockerignore # Tampoco necesitas este archivo dentro de la imagen
+
+# Documentación y archivos de prueba (generalmente no necesarios en producción)
+README.md
+test/
+tests/
+coverage/
+*.spec.ts
+*.e2e-spec.ts
+jest-e2e.json
+
+# Archivos de Git
+.git
+.gitignore
+.gitattributes
+
+# Otros archivos temporales o específicos del sistema operativo
+Thumbs.db
