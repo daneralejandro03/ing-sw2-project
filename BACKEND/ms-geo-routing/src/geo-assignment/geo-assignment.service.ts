@@ -504,6 +504,161 @@ export class GeoAssignmentService {
     }
   }
 
+  async getOrderDestinationCoordinates(
+    orderId: string,
+    token: string,
+  ): Promise<{ latitude: number; longitude: number }> {
+    // 1. Obtener Detalles de la Orden
+    const order = await this.getOrderDetails(orderId, token); //
+
+    // 2. Construir Dirección Completa del Cliente para Geocoding
+    const address1: string = order.address1 || ''; //
+    const address2: string = order.address2 || ''; //
+    const city: string = order.city || ''; //
+    const department: string = order.department || ''; //
+    const fullAddress = `${address1} ${address2}, ${city}, ${department}`.trim(); //
+
+    if (!fullAddress || fullAddress === ', ,') {
+      throw new BadRequestException(
+        `La orden #${orderId} no tiene una dirección de destino válida.`,
+      );
+    }
+
+    // 3. Geocodificar la Dirección del Cliente usando Google Geocoding API
+    let clientLat: number;
+    let clientLng: number;
+    try {
+      console.log(`Geocodificando dirección de destino para orden #${orderId}: ${fullAddress}`);
+      const geocodeUrl =
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          fullAddress,
+        )}&key=${this.googleApiKey}`; //
+      const geoResp = await firstValueFrom(this.http.get(geocodeUrl));
+
+      if (
+        geoResp.data.status === 'OK' &&
+        Array.isArray(geoResp.data.results) &&
+        geoResp.data.results.length > 0
+      ) {
+        const location = geoResp.data.results[0].geometry.location;
+        clientLat = location.lat; //
+        clientLng = location.lng; //
+      } else {
+        const errorMessage = geoResp.data.error_message || `Status: ${geoResp.data.status}`;
+        console.error(`Geocoding falló para la dirección "${fullAddress}": ${errorMessage}`);
+        throw new InternalServerErrorException(
+          `Geocoding falló para la dirección de la orden: ${errorMessage}`,
+        );
+      }
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException || err instanceof BadRequestException) {
+        throw err; // Re-lanzar excepciones ya manejadas o específicas.
+      }
+      console.error(`Error en Geocoding para la orden #${orderId}:`, err);
+      throw new InternalServerErrorException(
+        `Error procesando Geocoding para la dirección de la orden "${fullAddress}".`,
+      );
+    }
+
+    return { latitude: clientLat, longitude: clientLng };
+  }
+
+
+  async getCurrentRouteDestinationForDriver(
+    driverId: string,
+    token: string,
+  ): Promise<{ latitude: number; longitude: number }> {
+    let activeAssignment: AssignmentResponse | null = null; //
+    try {
+      const assignmentsUrl = `${this.ordersBaseUrl}assignments`; //
+      const response = await firstValueFrom(
+        this.http.get<AssignmentResponse[]>(assignmentsUrl, { //
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            userDeliveryDriver: driverId,
+            status: 'assigned',
+          },
+        }),
+      );
+
+      if (response.data && response.data.length > 0) {
+        if (response.data.length === 1) {
+          activeAssignment = response.data[0];
+        } else {
+          console.warn(
+            `Se encontraron ${response.data.length} asignaciones activas para el repartidor ${driverId}. Se seleccionará la más reciente.`,
+          );
+          const sortedAssignments = response.data.sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+          );
+          activeAssignment = sortedAssignments[0];
+        }
+      }
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          throw new UnauthorizedException( //
+            'Token inválido o expirado al consultar asignaciones en ms-orders.',
+          );
+        }
+        console.error(
+          `Error ${err.response?.status} buscando asignación activa para driverId=${driverId} en ms-orders:`, //
+          err.response?.data || err.message,
+        );
+      } else {
+        console.error(
+          `Error inesperado buscando asignación activa en ms-orders:`, //
+          err,
+        );
+      }
+
+      if (!(axios.isAxiosError(err) && err.response?.status === 404) && !activeAssignment) {
+        throw new InternalServerErrorException( //
+          `Error al comunicar con ms-orders para buscar la asignación activa del repartidor.`,
+        );
+      }
+    }
+
+    if (!activeAssignment || !activeAssignment.id) {
+      throw new NotFoundException( //
+        `No se encontró una asignación activa (estado 'assigned') en ms-orders para el repartidor #${driverId}.`,
+      );
+    }
+
+    const assignmentIdFromOrders = activeAssignment.id;
+
+    const geoAssignment = await this.geoRepo.findOne({ //
+      where: { assignmentId: assignmentIdFromOrders },
+      relations: ['route'],
+    });
+
+    if (!geoAssignment) {
+      throw new NotFoundException( //
+        `GeoAssignment no encontrado para la asignación ID '${assignmentIdFromOrders}' del repartidor #${driverId}. La ruta podría no estar procesada.`,
+      );
+    }
+
+    if (!geoAssignment.route) {
+      throw new NotFoundException( //
+        `La ruta no ha sido calculada o no está asociada al GeoAssignment con ID '${geoAssignment.geoAssignmentId}'.`,
+      );
+    }
+
+    const { destinationLat, destinationLng } = geoAssignment.route;
+
+    if (typeof destinationLat !== 'number' || typeof destinationLng !== 'number') { //
+      throw new InternalServerErrorException( //
+        `La ruta asociada al GeoAssignment '${geoAssignment.geoAssignmentId}' tiene coordenadas de destino inválidas.`,
+      );
+    }
+
+    return { //
+      latitude: destinationLat,
+      longitude: destinationLng,
+    };
+  }
+
+
   /**
    * Calcula la distancia Haversine (en metros) entre dos coordenadas.
    */
